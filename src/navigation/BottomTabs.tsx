@@ -6,6 +6,7 @@ import { colors } from '../theme/colors';
 import { DashboardScreen } from '../screens/DashboardScreen';
 import { SensorScreen } from '../screens/SensorScreen';
 import { HistoryScreen } from '../screens/HistoryScreen';
+import { SettingsScreen } from '../screens/SettingsScreen';
 import { GlobalHeader } from '../components/GlobalHeader';
 
 // Enable LayoutAnimation on Android
@@ -14,9 +15,6 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 const Tab = createBottomTabNavigator();
-
-// Temporary stub for unbuilt screens
-const PlaceholderScreen = () => <View style={{ flex: 1, backgroundColor: colors.surface }} />;
 
 const IconPlaceholder = ({ name, color, isActive }: { name: string, color: string, isActive: boolean }) => (
   <Text style={{ color, fontSize: 24, fontWeight: 'bold' }}>
@@ -88,7 +86,7 @@ export const BottomTabs = () => {
       <Tab.Screen name="DashboardTab" component={DashboardScreen} options={{ tabBarLabel: 'Dashboard' }} />
       <Tab.Screen name="SensorTab" component={SensorScreen} options={{ tabBarLabel: 'Sensors' }} />
       <Tab.Screen name="InsightsTab" component={HistoryScreen} options={{ tabBarLabel: 'Insights' }} />
-      <Tab.Screen name="ProfileTab" component={PlaceholderScreen} options={{ tabBarLabel: 'Profile' }} />
+      <Tab.Screen name="ProfileTab" component={SettingsScreen} options={{ tabBarLabel: 'Settings' }} />
     </Tab.Navigator>
   );
 };

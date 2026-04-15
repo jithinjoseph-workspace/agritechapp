@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   View, 
   Text, 
@@ -7,20 +7,56 @@ import {
   TouchableOpacity, 
   ScrollView,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
+import { authService } from '../api/authService';
+import { useAuth } from '../context/AuthContext';
 
 // Simple placeholder for Material Icons since react-native-vector-icons isn't installed.
 // In a real device you'd use <Icon name="eco" /> from react-native-vector-icons/MaterialIcons
 const IconPlaceholder = ({ name, color, size }: { name: string, color: string, size: number }) => (
   <Text style={{ color, fontSize: size, fontWeight: 'bold' }}>
-    {name === 'eco' ? '🌱' : name === 'mail' ? '✉️' : name === 'lock' ? '🔒' : name === 'terminal' ? '💻' : name === 'visibility' ? '👁️' : name === 'arrow_forward' ? '➡️' : ''}
+    {name === 'eco' ? '🌱' : name === 'mail' ? '✉️' : name === 'lock' ? '🔒' : name === 'terminal' ? '💻' : name === 'visibility' ? '👁️' : name === 'visibility_off' ? '🙈' : name === 'arrow_forward' ? '➡️' : ''}
   </Text>
 );
 
 export const LoginScreen = ({ navigation }: any) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const { login } = useAuth();
+
+  const handleLogin = async () => {
+    console.log('👆 Login button pressed');
+    if (!email || !password) {
+      setErrorMessage('Please enter both email and password.');
+      return;
+    }
+
+    setIsLoading(true);
+    setErrorMessage(null);
+
+    try {
+      const data = await authService.mobileLogin(email, password);
+      console.log('Login successful:', data);
+      
+      // Update global auth state
+      await login(data);
+    } catch (error: any) {
+      console.error('Login error:', error);
+      const msg = error.response?.data?.message || error.message || 'Unable to connect to server. Check your internet or API IP.';
+      setErrorMessage(msg);
+    } finally {
+      setIsLoading(false);
+    }
+  };
   return (
     <SafeAreaView style={styles.container}>
       {/* Hero Decorative Layer (Asymmetric Design - approximated with absolute positioning) */}
@@ -49,6 +85,13 @@ export const LoginScreen = ({ navigation }: any) => {
           {/* Form Section */}
           <View style={styles.formSection}>
             
+            {/* Error Message Display */}
+            {errorMessage && (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{errorMessage}</Text>
+              </View>
+            )}
+
             {/* Email Input */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>EMAIL</Text>
@@ -62,6 +105,9 @@ export const LoginScreen = ({ navigation }: any) => {
                   placeholderTextColor={colors.outlineVariant}
                   keyboardType="email-address"
                   autoCapitalize="none"
+                  value={email}
+                  onChangeText={setEmail}
+                  editable={!isLoading}
                 />
               </View>
             </View>
@@ -77,24 +123,45 @@ export const LoginScreen = ({ navigation }: any) => {
                   style={styles.input} 
                   placeholder="••••••••••••"
                   placeholderTextColor={colors.outlineVariant}
-                  secureTextEntry
+                  secureTextEntry={!showPassword}
+                  value={password}
+                  onChangeText={setPassword}
+                  editable={!isLoading}
                 />
-                <TouchableOpacity style={styles.inputIconRight}>
-                  <IconPlaceholder name="visibility" color={colors.outlineVariant} size={18} />
+                <TouchableOpacity 
+                  style={styles.inputIconRight}
+                  onPress={() => setShowPassword(!showPassword)}
+                  disabled={isLoading}
+                >
+                  <IconPlaceholder 
+                    name={showPassword ? 'visibility_off' : 'visibility'} 
+                    color={colors.outlineVariant} 
+                    size={18} 
+                  />
                 </TouchableOpacity>
               </View>
             </View>
 
 
             {/* Forgot Password */}
-            <TouchableOpacity style={styles.forgotPasswordContainer}>
+            <TouchableOpacity style={styles.forgotPasswordContainer} disabled={isLoading}>
               <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
             </TouchableOpacity>
 
             {/* Primary Action */}
-            <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('MainTabs')}>
-              <Text style={styles.primaryButtonText}>Sign In to Dashboard</Text>
-              <IconPlaceholder name="arrow_forward" color={colors.onPrimary} size={18} />
+            <TouchableOpacity 
+              style={[styles.primaryButton, isLoading && { opacity: 0.7 }]} 
+              onPress={handleLogin}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color={colors.onPrimary} size="small" />
+              ) : (
+                <>
+                  <Text style={styles.primaryButtonText}>Sign In to Dashboard</Text>
+                  <IconPlaceholder name="arrow_forward" color={colors.onPrimary} size={18} />
+                </>
+              )}
             </TouchableOpacity>
 
             {/* Divider */}
@@ -365,5 +432,19 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     letterSpacing: 0,
     maxWidth: 200,
-  }
+  },
+  errorContainer: {
+    backgroundColor: '#fee2e2',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+  },
+  errorText: {
+    color: '#991b1b',
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
 });

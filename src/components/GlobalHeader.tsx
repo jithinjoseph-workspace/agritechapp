@@ -19,6 +19,7 @@ const BLOCKS = [
 
 export const GlobalHeader = () => {
   const insets = useSafeAreaInsets();
+  
   const [activeSector, setActiveSector] = useState(BLOCKS[0]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
