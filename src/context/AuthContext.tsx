@@ -12,6 +12,7 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   isLoading: true,
+  user: null,
   login: async () => {},
   logout: async () => {},
 });

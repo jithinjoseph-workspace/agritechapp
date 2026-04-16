@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { Alert, View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { colors } from '../theme/colors';
@@ -39,7 +39,10 @@ export const SettingsScreen = () => {
     if (value !== null) {
       const hasPermission = await requestPermission();
       if (!hasPermission) {
-        alert("Permission Denied: System notifications require your permission to show up outside the app.");
+        Alert.alert(
+          'Permission Denied',
+          "System notifications require your permission to show up outside the app.",
+        );
         return;
       }
     }
@@ -102,7 +105,10 @@ export const SettingsScreen = () => {
             style={styles.testButton}
             onPress={async () => {
               if (!isNativeAvailable) {
-                alert("Cannot test system notification: Native module is still missing. Please ensure you ran 'npx react-native run-android' AND restarted the Metro bundler.");
+                Alert.alert(
+                  'Cannot Test System Notification',
+                  "Native module is still missing. Please ensure you ran 'npx react-native run-android' and restarted the Metro bundler.",
+                );
               } else {
                 await testSystemNotification();
               }

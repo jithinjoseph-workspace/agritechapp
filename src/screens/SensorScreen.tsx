@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
-import { useAuth } from '../context/AuthContext';
 import { useFarm } from '../context/FarmContext';
 import { authService } from '../api/authService';
 import { useState, useEffect } from 'react';
@@ -35,7 +34,6 @@ const IconPlaceholder = ({ name, color, size }: { name: string, color: string, s
 );
 
 export const SensorScreen = ({ navigation }: any) => {
-  const { user } = useAuth();
   const { activeBlock, refreshActiveBlockSensors } = useFarm();
 
   const [ph, setPh] = useState('');
@@ -54,8 +52,8 @@ export const SensorScreen = ({ navigation }: any) => {
       setTemp(getVal('soil_temperature')); // Targeted to soil temp
       setMoisture(getVal('soil_moisture'));
       setHumidity(getVal('humidity'));
-      setSunlight('850');
-      setFertility('78');
+      setSunlight(getVal('sunlight'));
+      setFertility(getVal('fertility'));
     }
   }, [activeBlock]);
 
@@ -67,7 +65,6 @@ export const SensorScreen = ({ navigation }: any) => {
       return;
     }
 
-    Alert.alert("DEBUG", "Starting API Call to " + activeBlock.block_id);
     setIsLoading(true);
     try {
       const payload = {
@@ -88,8 +85,9 @@ export const SensorScreen = ({ navigation }: any) => {
       Alert.alert("Success", "Soil data updated and refreshed from API.", [
         { text: "OK", onPress: () => navigation.navigate('DashboardTab') }
       ]);
-    } catch (e) {
-      Alert.alert("Error", "Could not save values.");
+    } catch (e: any) {
+      const message = e?.response?.data?.detail || e?.message || "Could not save values.";
+      Alert.alert("Error", message);
     } finally {
       setIsLoading(false);
     }
@@ -106,9 +104,9 @@ export const SensorScreen = ({ navigation }: any) => {
         <View style={styles.grid}>
           {[
             { label: 'pH Level', value: ph, setter: setPh, unit: 'pH', icon: 'science', tag: 'SOIL HEALTH' },
-            { label: 'Soil Temperature', value: temp, setter: setTemp, unit: '°C', icon: 'thermostat', tag: 'THERMAL' },
+            { label: 'Soil Temperature', value: temp, setter: setTemp, unit: 'C', icon: 'thermostat', tag: 'THERMAL' },
             { label: 'Soil Moisture', value: moisture, setter: setMoisture, unit: '%', icon: 'water_drop', tag: 'MOISTURE' },
-            { label: 'Sunlight', value: sunlight, setter: setSunlight, unit: 'W/m²', icon: 'light_mode', tag: 'SOLAR' },
+            { label: 'Sunlight', value: sunlight, setter: setSunlight, unit: 'W/m2', icon: 'light_mode', tag: 'SOLAR' },
             { label: 'Humidity', value: humidity, setter: setHumidity, unit: '%', icon: 'humidity_mid', tag: 'ATMOSPHERE' },
             { label: 'Soil Fertility', value: fertility, setter: setFertility, unit: 'EC', icon: 'compost', tag: 'NUTRIENTS' },
           ].map((item, idx) => (

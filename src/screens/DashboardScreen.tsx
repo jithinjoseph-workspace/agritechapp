@@ -26,6 +26,7 @@ const IconPlaceholder = ({ name, color, size }: { name: string, color: string, s
      name === 'humidity_low' ? '💨' : 
      name === 'remove' ? '➖' : 
      name === 'science' ? '⚗️' : 
+     name === 'compost' ? '🌱' : 
      name === 'check_circle' ? '✅' : 
      name === 'arrow_forward' ? '➡️' : 
      name === 'cloudy_snowing' ? '🌧️' : 
@@ -80,7 +81,11 @@ export const DashboardScreen = ({ navigation }: any) => {
   const formatValue = (sensorType: string, dummyValue: string) => {
     const sensor = getSensorData(sensorType);
     if (!sensor) return dummyValue;
-    return `${sensor.value}${sensor.unit}`;
+    return `${sensor.value} ${sensor.unit}`.trim();
+  };
+
+  const formatStatus = (sensorType: string, fallback: string) => {
+    return getSensorData(sensorType)?.status || fallback;
   };
 
   // DEBUG: Log the data being displayed
@@ -89,6 +94,8 @@ export const DashboardScreen = ({ navigation }: any) => {
   console.log('   🌡️ Temp:', formatValue('soil_temperature', 'N/A'));
   console.log('   🧪 pH:', formatValue('ph_level', 'N/A'));
   console.log('   💨 Humid:', formatValue('humidity', 'N/A'));
+  console.log('   ☀️ Sunlight:', formatValue('sunlight', 'N/A'));
+  console.log('   🌱 Fertility:', formatValue('fertility', 'N/A'));
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
@@ -101,27 +108,27 @@ export const DashboardScreen = ({ navigation }: any) => {
         <View style={styles.quickStatsGrid}>
           <DisplayStatCard 
             iconName="water_drop" iconBg="rgba(1, 45, 29, 0.1)" iconColor={colors.primary}
-            title="MOISTURE" value={formatValue('soil_moisture', '25%')} changeText={getSensorData('soil_moisture')?.status || 'Normal'} changeIcon="check_circle" isError={false} 
+            title="MOISTURE" value={formatValue('soil_moisture', '25 %')} changeText={formatStatus('soil_moisture', 'Normal')} changeIcon="check_circle" isError={false} 
           />
           <DisplayStatCard 
             iconName="device_thermostat" iconBg="rgba(0, 108, 72, 0.1)" iconColor={colors.secondary}
-            title="TEMP" value={formatValue('soil_temperature', '22°C')} changeText="Soil Temperature" changeIcon="check_circle" isError={false} 
+            title="TEMP" value={formatValue('soil_temperature', '22 C')} changeText={formatStatus('soil_temperature', 'Normal')} changeIcon="check_circle" isError={false} 
           />
           <DisplayStatCard 
             iconName="humidity_low" iconBg="rgba(0, 69, 45, 0.1)" iconColor={colors.tertiary}
-            title="HUMIDITY" value={formatValue('humidity', '45%')} changeText="Stable" changeIcon="remove" isError={false} 
+            title="HUMIDITY" value={formatValue('humidity', '45 %')} changeText={formatStatus('humidity', 'Normal')} changeIcon="remove" isError={false} 
           />
           <DisplayStatCard 
             iconName="science" iconBg="rgba(176, 241, 204, 0.4)" iconColor={colors.tertiary}
-            title="pH LEVEL" value={formatValue('ph_level', '6.5')} changeText="Ideal Range" changeIcon="check_circle" isError={false} 
+            title="pH LEVEL" value={formatValue('ph_level', '6.5 pH')} changeText={formatStatus('ph_level', 'Normal')} changeIcon="check_circle" isError={false} 
           />
           <DisplayStatCard 
             iconName="wb_sunny" iconBg="rgba(255, 218, 106, 0.2)" iconColor="#D97706"
-            title="SUNLIGHT" value="850 W/m²" changeText="Optimal (Dummy)" changeIcon="wb_sunny" isError={false} 
+            title="SUNLIGHT" value={formatValue('sunlight', '850 W/m2')} changeText={formatStatus('sunlight', 'Normal')} changeIcon="wb_sunny" isError={false} 
           />
           <DisplayStatCard 
             iconName="compost" iconBg="rgba(1, 45, 29, 0.1)" iconColor={colors.primary}
-            title="FERTILITY" value="78 EC" changeText="Stable (Dummy)" changeIcon="check_circle" isError={false} 
+            title="FERTILITY" value={formatValue('fertility', '1.6 EC')} changeText={formatStatus('fertility', 'Normal')} changeIcon="check_circle" isError={false} 
           />
           
           <View style={{height: 48, width: '100%'}} />

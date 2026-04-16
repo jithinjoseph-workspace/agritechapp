@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, LayoutAnimation, UIManager } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors } from '../theme/colors';
+import { BottomTabParamList } from './types';
 
 import { DashboardScreen } from '../screens/DashboardScreen';
 import { SensorScreen } from '../screens/SensorScreen';
@@ -9,7 +10,7 @@ import { HistoryScreen } from '../screens/HistoryScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { GlobalHeader } from '../components/GlobalHeader';
 
-const Tab = createBottomTabNavigator();
+const Tab = createBottomTabNavigator<BottomTabParamList>();
 
 const IconPlaceholder = ({ name, color, isActive }: { name: string, color: string, isActive: boolean }) => (
   <Text style={{ color, fontSize: 24, fontWeight: 'bold' }}>

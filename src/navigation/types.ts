@@ -27,3 +27,8 @@ export type SensorScreenProps = CompositeScreenProps<
   BottomTabScreenProps<BottomTabParamList, 'SensorTab'>,
   NativeStackScreenProps<RootStackParamList>
 >;
+
+export type HistoryScreenProps = CompositeScreenProps<
+  BottomTabScreenProps<BottomTabParamList, 'InsightsTab'>,
+  NativeStackScreenProps<RootStackParamList>
+>;

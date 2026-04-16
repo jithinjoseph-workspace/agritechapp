@@ -44,14 +44,20 @@ export const LoginScreen = ({ navigation }: any) => {
     setErrorMessage(null);
 
     try {
-      const data = await authService.mobileLogin(email, password);
+      const data = await authService.mobileLogin(email.trim(), password);
       console.log('Login successful:', data);
       
       // Update global auth state
       await login(data);
     } catch (error: any) {
       console.error('Login error:', error);
-      const msg = error.response?.data?.message || error.message || 'Unable to connect to server. Check your internet or API IP.';
+      const msg =
+        error.response?.data?.detail ||
+        error.response?.data?.message ||
+        (error.message === 'Network Error'
+          ? 'Unable to reach the API server. Make sure the backend is running on port 8000 and the app can access it.'
+          : error.message) ||
+        'Unable to connect to server. Check your internet or API IP.';
       setErrorMessage(msg);
     } finally {
       setIsLoading(false);
