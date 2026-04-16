@@ -1,18 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { colors } from '../theme/colors';
 import { useReminder } from '../context/ReminderContext';
 
-const IconPlaceholder = ({ name, color, size }: { name: string, color: string, size: number }) => (
-  <Text style={{ color, fontSize: size, fontWeight: 'bold' }}>
-    {name === 'notifications_active' ? '🔔' : 
-     name === 'timer' ? '⏱️' : 
-     name === 'logout' ? '🚪' :
-     name === 'check_circle' ? '✅' : ''}
-  </Text>
-);
+// Replaced placeholder with real MaterialIcons
 
 const INTERVALS = [
   { label: 'Off (Do not disturb)', value: null },
@@ -39,7 +33,7 @@ export const SettingsScreen = () => {
     if (value !== null) {
       const hasPermission = await requestPermission();
       if (!hasPermission) {
-        alert("Permission Denied: System notifications require your permission to show up outside the app.");
+        Alert.alert("Permission Denied", "System notifications require your permission to show up outside the app.");
         return;
       }
     }
@@ -59,7 +53,7 @@ export const SettingsScreen = () => {
         <View style={styles.section}>
           <View style={[styles.sectionHeader, { justifyContent: 'space-between' }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <IconPlaceholder name="notifications_active" color={colors.primary} size={20} />
+              <Icon name="notifications-active" color={colors.primary} size={20} />
               <Text style={styles.sectionTitle}>System Notifications</Text>
             </View>
             <View style={[styles.statusBadge, { backgroundColor: isNativeAvailable ? '#dcfce7' : '#fee2e2' }]}>
@@ -83,7 +77,7 @@ export const SettingsScreen = () => {
                 onPress={() => handleIntervalChange(interval.value)}
               >
                 <View style={styles.optionLeft}>
-                  <IconPlaceholder name="timer" color={intervalSeconds === interval.value ? colors.primary : colors.outlineVariant} size={18} />
+                  <Icon name="timer" color={intervalSeconds === interval.value ? colors.primary : colors.outlineVariant} size={18} />
                   <Text style={[
                     styles.optionLabel,
                     intervalSeconds === interval.value && styles.optionLabelActive
@@ -92,7 +86,7 @@ export const SettingsScreen = () => {
                   </Text>
                 </View>
                 {intervalSeconds === interval.value && (
-                  <IconPlaceholder name="check_circle" color={colors.primary} size={20} />
+                  <Icon name="check-circle" color={colors.primary} size={20} />
                 )}
               </TouchableOpacity>
             ))}
@@ -102,7 +96,7 @@ export const SettingsScreen = () => {
             style={styles.testButton}
             onPress={async () => {
               if (!isNativeAvailable) {
-                alert("Cannot test system notification: Native module is still missing. Please ensure you ran 'npx react-native run-android' AND restarted the Metro bundler.");
+                Alert.alert("Module Missing", "Cannot test system notification: Native module is still missing. Please ensure you ran 'npx react-native run-android' AND restarted the Metro bundler.");
               } else {
                 await testSystemNotification();
               }
@@ -119,7 +113,7 @@ export const SettingsScreen = () => {
               await logout();
             }}
           >
-            <IconPlaceholder name="logout" color="#991b1b" size={18} />
+            <Icon name="logout" color="#991b1b" size={18} />
             <Text style={styles.logoutButtonText}>Disconnect & Logout</Text>
           </TouchableOpacity>
           <Text style={styles.versionText}>AgriTech App v0.1.0-alpha</Text>

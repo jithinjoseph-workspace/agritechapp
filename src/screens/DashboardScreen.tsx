@@ -1,54 +1,30 @@
 import React from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  Platform
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Platform,
+  TouchableOpacity
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { colors } from '../theme/colors';
 
-const IconPlaceholder = ({ name, color, size }: { name: string, color: string, size: number }) => (
-  <Text style={{ color, fontSize: size, fontWeight: 'bold' }}>
-    {name === 'grid_view' ? '☰' : 
-     name === 'expand_more' ? '🔽' : 
-     name === 'location_on' ? '📍' : 
-     name === 'warning' ? '⚠️' : 
-     name === 'water_drop' ? '💧' : 
-     name === 'water_ph' ? '🧪' : 
-     name === 'trending_down' ? '📉' : 
-     name === 'device_thermostat' ? '🌡️' : 
-     name === 'trending_up' ? '📈' : 
-     name === 'humidity_low' ? '💨' : 
-     name === 'remove' ? '➖' : 
-     name === 'science' ? '⚗️' : 
-     name === 'check_circle' ? '✅' : 
-     name === 'arrow_forward' ? '➡️' : 
-     name === 'cloudy_snowing' ? '🌧️' : 
-     name === 'wb_sunny' ? '☀️' : 
-     name === 'partly_cloudy_day' ? '⛅' : 
-     name === 'cloud' ? '☁️' : 
-     name === 'rainy' ? '🌧️' : 
-     name === 'dashboard' ? '📊' : 
-     name === 'sensors' ? '🎛️' : 
-     name === 'psychology' ? '🧠' : 
-     name === 'person' ? '👤' : ''}
-  </Text>
-);
+// Replaced placeholder with real MaterialIcons
 
 const DisplayStatCard = ({ iconName, iconBg, iconColor, title, value, changeText, changeIcon, isError }: any) => (
   <View style={styles.statCard}>
     <View style={styles.statHeader}>
       <View style={{ backgroundColor: iconBg, padding: 8, borderRadius: 8 }}>
-        <IconPlaceholder name={iconName} color={iconColor} size={18} />
+        <Icon name={iconName.replace(/_/g, '-')} color={iconColor} size={18} />
       </View>
       <Text style={styles.statName}>{title}</Text>
     </View>
     <Text style={styles.statValue}>{value}</Text>
     <View style={styles.changeTextRow}>
-       <IconPlaceholder name={changeIcon} color={isError ? colors.error : colors.secondary} size={12} />
-       <Text style={isError ? styles.statChangeError : styles.statChangeNeutral}>{changeText}</Text>
+      <Icon name={changeIcon.replace(/_/g, '-')} color={isError ? colors.error : colors.secondary} size={12} />
+      <Text style={isError ? styles.statChangeError : styles.statChangeNeutral}>{changeText}</Text>
     </View>
   </View>
 );
@@ -58,40 +34,57 @@ const DisplayStatCard = ({ iconName, iconBg, iconColor, title, value, changeText
 export const DashboardScreen = ({ navigation }: any) => {
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
 
         {/* Quick Stats Bento Grid - All Sensors Display */}
         <View style={styles.quickStatsGrid}>
-          <DisplayStatCard 
+          <DisplayStatCard
             iconName="water_drop" iconBg="rgba(1, 45, 29, 0.1)" iconColor={colors.primary}
-            title="MOISTURE" value="42.8%" changeText="-2.4% vs Yesterday" changeIcon="trending_down" isError={true} 
+            title="MOISTURE" value="42.8%" changeText="-2.4% vs Yesterday" changeIcon="trending_down" isError={true}
           />
-          <DisplayStatCard 
+          <DisplayStatCard
             iconName="device_thermostat" iconBg="rgba(0, 108, 72, 0.1)" iconColor={colors.secondary}
-            title="TEMP" value="24°C" changeText="+1.2% vs Avg" changeIcon="trending_up" isError={false} 
+            title="TEMP" value="24°C" changeText="+1.2% vs Avg" changeIcon="trending_up" isError={false}
           />
-          <DisplayStatCard 
+          <DisplayStatCard
             iconName="humidity_low" iconBg="rgba(0, 69, 45, 0.1)" iconColor={colors.tertiary}
-            title="HUMIDITY" value="68%" changeText="Stable" changeIcon="remove" isError={false} 
+            title="HUMIDITY" value="68%" changeText="Stable" changeIcon="remove" isError={false}
           />
-          <DisplayStatCard 
+          <DisplayStatCard
             iconName="science" iconBg="rgba(176, 241, 204, 0.4)" iconColor={colors.tertiary}
-            title="pH LEVEL" value="6.4" changeText="Target: 6.2-6.8" changeIcon="check_circle" isError={false} 
+            title="pH LEVEL" value="6.4" changeText="Target: 6.2-6.8" changeIcon="check_circle" isError={false}
           />
-          <DisplayStatCard 
+          <DisplayStatCard
             iconName="wb_sunny" iconBg="rgba(255, 218, 106, 0.2)" iconColor="#D97706"
-            title="SUNLIGHT" value="850 W/m²" changeText="Optimal" changeIcon="trending_up" isError={false} 
+            title="SUNLIGHT" value="850 W/m²" changeText="Optimal" changeIcon="trending_up" isError={false}
           />
-          <DisplayStatCard 
+          <DisplayStatCard
             iconName="compost" iconBg="rgba(1, 45, 29, 0.1)" iconColor={colors.primary}
-            title="FERTILITY" value="78 EC" changeText="Stable" changeIcon="remove" isError={false} 
+            title="FERTILITY" value="78 EC" changeText="Stable" changeIcon="remove" isError={false}
           />
-          
+
+          {/* New Farm Mapping Card - Hidden for now */}
+          {/* <TouchableOpacity
+            style={[styles.statCard, { backgroundColor: colors.primary, width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
+            onPress={() => navigation.navigate('Mapping')}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', padding: 12, borderRadius: 12 }}>
+                <Icon name="map" color="#fff" size={24} />
+              </View>
+              <View>
+                <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>Farm Boundaries</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>Map your blocks & areas</Text>
+              </View>
+            </View>
+            <Icon name="chevron-right" color="#fff" size={24} />
+          </TouchableOpacity> */}
+
           {/* Adding bottom padding so nothing hides behind bottom bar */}
-          <View style={{height: 48, width: '100%'}} />
+          <View style={{ height: 48, width: '100%' }} />
         </View>
       </ScrollView>
     </SafeAreaView>

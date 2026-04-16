@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
-import { Alert } from 'react-native';
+import { Platform, Alert } from 'react-native';
 import notifee, { TriggerType, AuthorizationStatus } from '@notifee/react-native';
 
 type ReminderContextType = {
@@ -51,15 +51,28 @@ export const ReminderProvider = ({ children }: { children: React.ReactNode }) =>
 
   // Hybrid Background / Foreground Alert Logic
   useEffect(() => {
-    if (!intervalSeconds) return;
-
     let timerId: any = null;
 
     const syncTriggers = async () => {
+      // 1. ALWAYS cancel all existing scheduled triggers first
       if (isNativeAvailable) {
         try {
           await notifee.cancelAllNotifications();
-          
+          console.log("🧹 [Reminders] Previous notifications cleared.");
+        } catch (e: any) {
+          console.error("❌ [Reminders] Failed to clear notifications:", e);
+        }
+      }
+
+      // 2. If interval is null (OFF), stop here
+      if (!intervalSeconds) {
+        console.log("🔕 [Reminders] System is now OFF.");
+        return;
+      }
+
+      // 3. Schedule new trigger if native is available
+      if (isNativeAvailable) {
+        try {
           let trigger: any;
           
           if (intervalSeconds < 900) {
@@ -89,13 +102,15 @@ export const ReminderProvider = ({ children }: { children: React.ReactNode }) =>
             },
             trigger
           );
+          console.log(`📡 [Reminders] Scheduled for every ${intervalSeconds} seconds.`);
           return; 
         } catch (e: any) {
-          // Fall back gracefully
+          console.error("❌ [Reminders] Scheduling failed:", e);
         }
       }
 
-      // FALLBACK: In-App Timer (if build is not finished or native fails)
+      // 4. FALLBACK: In-App Timer (if native fails)
+      console.log("⏱️ [Reminders] Native failed, using In-App fallback timer.");
       timerId = setInterval(() => {
         Alert.alert(
           "Sensor Logging Reminder",

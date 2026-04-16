@@ -10,29 +10,15 @@ import {
   Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { colors } from '../theme/colors';
 
-const IconPlaceholder = ({ name, color, size }: { name: string, color: string, size: number }) => (
-  <Text style={{ color, fontSize: size, fontWeight: 'bold' }}>
-    {name === 'grid_view' ? '☰' : 
-     name === 'science' ? '🧪' : 
-     name === 'thermostat' ? '🌡️' : 
-     name === 'water_drop' ? '💧' : 
-     name === 'light_mode' ? '☀️' : 
-     name === 'humidity_mid' ? '💨' : 
-     name === 'compost' ? '🌱' : 
-     name === 'sync' ? '🔄' : 
-     name === 'dashboard' ? '📊' : 
-     name === 'sensors' ? '🎛️' : 
-     name === 'psychology' ? '🧠' : 
-     name === 'person' ? '👤' : ''}
-  </Text>
-);
+// Replaced placeholder with real MaterialIcons
 
 const SensorCard = ({ iconName, tag, label, defaultValue, unit }: any) => (
   <View style={styles.cardContainer}>
     <View style={styles.cardHeader}>
-      <IconPlaceholder name={iconName} color={colors.secondary} size={20} />
+      <Icon name={iconName.replace(/_/g, '-')} color={colors.secondary} size={20} />
       <Text style={styles.cardTag}>{tag}</Text>
     </View>
     <Text style={styles.cardLabel}>{label}</Text>
@@ -76,7 +62,7 @@ export const SensorScreen = ({ navigation }: any) => {
         {/* Call to Action */}
         <View style={styles.ctaContainer}>
           <TouchableOpacity style={styles.syncButton} activeOpacity={0.8}>
-            <IconPlaceholder name="sync" color={colors.onPrimary} size={20} />
+            <Icon name="sync" color={colors.onPrimary} size={20} />
             <Text style={styles.syncButtonText}>Sync & Update</Text>
           </TouchableOpacity>
           <Text style={styles.lastSyncedText}>LAST SYNCED: 14:22 PM • STATION A-12</Text>

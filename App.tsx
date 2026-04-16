@@ -5,9 +5,11 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { RootStackParamList } from './src/navigation/types';
 import { LoginScreen } from './src/screens/LoginScreen';
+import { MappingScreen } from './src/screens/MappingScreen';
 import { BottomTabs } from './src/navigation/BottomTabs';
 import { ReminderProvider } from './src/context/ReminderContext';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { FarmProvider } from './src/context/FarmContext';
 import { colors } from './src/theme/colors';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -33,7 +35,10 @@ function Navigation(): React.JSX.Element {
       {!isAuthenticated ? (
         <Stack.Screen name="Login" component={LoginScreen} />
       ) : (
-        <Stack.Screen name="MainTabs" component={BottomTabs} />
+        <>
+          <Stack.Screen name="MainTabs" component={BottomTabs} />
+          <Stack.Screen name="Mapping" component={MappingScreen} />
+        </>
       )}
     </Stack.Navigator>
   );
@@ -42,11 +47,13 @@ function Navigation(): React.JSX.Element {
 function App(): React.JSX.Element {
   return (
     <AuthProvider>
-      <ReminderProvider>
-        <NavigationContainer>
-          <Navigation />
-        </NavigationContainer>
-      </ReminderProvider>
+      <FarmProvider>
+        <ReminderProvider>
+          <NavigationContainer>
+            <Navigation />
+          </NavigationContainer>
+        </ReminderProvider>
+      </FarmProvider>
     </AuthProvider>
   );
 }

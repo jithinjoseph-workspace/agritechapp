@@ -12,17 +12,12 @@ import {
   Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { colors } from '../theme/colors';
 import { authService } from '../api/authService';
 import { useAuth } from '../context/AuthContext';
 
-// Simple placeholder for Material Icons since react-native-vector-icons isn't installed.
-// In a real device you'd use <Icon name="eco" /> from react-native-vector-icons/MaterialIcons
-const IconPlaceholder = ({ name, color, size }: { name: string, color: string, size: number }) => (
-  <Text style={{ color, fontSize: size, fontWeight: 'bold' }}>
-    {name === 'eco' ? '🌱' : name === 'mail' ? '✉️' : name === 'lock' ? '🔒' : name === 'terminal' ? '💻' : name === 'visibility' ? '👁️' : name === 'visibility_off' ? '🙈' : name === 'arrow_forward' ? '➡️' : ''}
-  </Text>
-);
+// Replaced placeholder with real MaterialIcons
 
 export const LoginScreen = ({ navigation }: any) => {
   const [email, setEmail] = useState('');
@@ -75,7 +70,7 @@ export const LoginScreen = ({ navigation }: any) => {
           {/* Brand Identity */}
           <View style={styles.header}>
             <View style={styles.logoContainer}>
-              <IconPlaceholder name="eco" color={colors.secondaryFixed} size={32} />
+              <Icon name="eco" color={colors.secondaryFixed} size={32} />
             </View>
             <Text style={styles.subtitle}>AGRONOMIST</Text>
             <Text style={styles.title}>Cultivating Success</Text>
@@ -97,7 +92,7 @@ export const LoginScreen = ({ navigation }: any) => {
               <Text style={styles.label}>EMAIL</Text>
               <View style={styles.inputContainer}>
                 <View style={styles.inputIconLeft}>
-                  <IconPlaceholder name="mail" color={colors.outlineVariant} size={18} />
+                  <Icon name="mail" color={colors.outlineVariant} size={18} />
                 </View>
                 <TextInput 
                   style={styles.input} 
@@ -117,7 +112,7 @@ export const LoginScreen = ({ navigation }: any) => {
               <Text style={styles.label}>PASSWORD</Text>
               <View style={styles.inputContainer}>
                 <View style={styles.inputIconLeft}>
-                  <IconPlaceholder name="lock" color={colors.outlineVariant} size={18} />
+                  <Icon name="lock" color={colors.outlineVariant} size={18} />
                 </View>
                 <TextInput 
                   style={styles.input} 
@@ -133,11 +128,7 @@ export const LoginScreen = ({ navigation }: any) => {
                   onPress={() => setShowPassword(!showPassword)}
                   disabled={isLoading}
                 >
-                  <IconPlaceholder 
-                    name={showPassword ? 'visibility_off' : 'visibility'} 
-                    color={colors.outlineVariant} 
-                    size={18} 
-                  />
+                  <Icon name={showPassword ? 'visibility-off' : 'visibility'} color={colors.outlineVariant} size={18} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -159,7 +150,7 @@ export const LoginScreen = ({ navigation }: any) => {
               ) : (
                 <>
                   <Text style={styles.primaryButtonText}>Sign In to Dashboard</Text>
-                  <IconPlaceholder name="arrow_forward" color={colors.onPrimary} size={18} />
+                  <Icon name="arrow-forward" color={colors.onPrimary} size={18} />
                 </>
               )}
             </TouchableOpacity>
@@ -311,7 +302,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   input: {
-    wight: '100%',
+    width: '100%',
     backgroundColor: colors.surfaceContainerLowest,
     borderWidth: 1,
     borderColor: 'rgba(193, 200, 194, 0.3)', // outlineVariant with opacity

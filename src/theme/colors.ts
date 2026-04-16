@@ -46,4 +46,5 @@ export const colors = {
   tertiaryContainer: '#00452d',
   primaryFixedDim: '#a5d0b9',
   onSurface: '#191c1d',
+  success: '#10b981',
 };
