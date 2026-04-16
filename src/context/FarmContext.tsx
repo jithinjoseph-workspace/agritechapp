@@ -89,37 +89,28 @@ export const FarmProvider = ({ children }: { children: React.ReactNode }) => {
       
       setFarmData(prev => {
         if (!prev) return prev;
-        
-        // Map common keys to sensor_type
-        const mapping: Record<string, string> = {
-          moisture: 'soil_moisture',
-          temp: 'soil_temperature',
-          humidity: 'humidity',
-          ph_level: 'ph_level',
-          sunlight: 'sunlight',
-          fertility: 'fertility'
-        };
 
         const updatedBlocks = prev.blocks.map(block => {
           if (block.block_id !== blockId) return block;
 
           console.log(`🔄 [Context] Updating sensors for block: ${block.lanslu}`);
-          
-          const updatedSensors = block.sensors.sensors.map(sensor => {
-            const apiKey = Object.keys(mapping).find(key => mapping[key] === sensor.sensor_type);
-            if (apiKey && latestData[apiKey] !== undefined) {
-              console.log(`   📍 ${sensor.sensor_type}: ${sensor.value} -> ${latestData[apiKey]}`);
-              return { ...sensor, value: latestData[apiKey], observed_at: new Date().toISOString() };
-            }
-            return sensor;
+
+          const updatedSensors = Array.isArray(latestData?.sensors)
+            ? latestData.sensors
+            : block.sensors.sensors;
+
+          updatedSensors.forEach((sensor: any) => {
+            console.log(`   📍 ${sensor.sensor_type}: ${sensor.value}`);
           });
 
           return {
             ...block,
             sensors: {
               ...block.sensors,
+              block_id: latestData?.block_id ?? block.sensors.block_id,
+              block_name: latestData?.block_name ?? block.sensors.block_name,
+              generated_at: latestData?.generated_at ?? new Date().toISOString(),
               sensors: updatedSensors,
-              generated_at: new Date().toISOString()
             }
           };
         });
