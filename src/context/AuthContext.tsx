@@ -4,6 +4,7 @@ import { authService } from '../api/authService';
 type AuthContextType = {
   isAuthenticated: boolean;
   isLoading: boolean;
+  user: any | null;
   login: (data: any) => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -17,6 +18,7 @@ const AuthContext = createContext<AuthContextType>({
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -35,16 +37,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const login = async (data: any) => {
     // Note: authService.mobileLogin already saves the token
+    setUser(data.user || data); // Assume data contains user info or is the user info
     setIsAuthenticated(true);
   };
 
   const logout = async () => {
     await authService.removeToken();
+    setUser(null);
     setIsAuthenticated(false);
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, isLoading, user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

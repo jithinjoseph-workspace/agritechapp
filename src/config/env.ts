@@ -9,4 +9,7 @@ export const API_BASE_URL = 'http://192.168.1.71:8000';
 
 export const ENDPOINTS = {
   LOGIN: `${API_BASE_URL}/api/mobile/auth/login`,
+  USER_DETAILS: (userId: string) => `${API_BASE_URL}/api/mobile/users/${userId}/details`,
+  SUBMIT_SNAPSHOT: (blockId: string) => `${API_BASE_URL}/api/mobile/blocks/${blockId}/sensor-snapshots`,
+  LATEST_SNAPSHOT: (blockId: string) => `${API_BASE_URL}/api/mobile/blocks/${blockId}/sensor-snapshots/latest`,
 };

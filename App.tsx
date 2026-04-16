@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -8,14 +8,25 @@ import { LoginScreen } from './src/screens/LoginScreen';
 import { BottomTabs } from './src/navigation/BottomTabs';
 import { ReminderProvider } from './src/context/ReminderContext';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { FarmProvider, useFarm } from './src/context/FarmContext';
 import { colors } from './src/theme/colors';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function Navigation(): React.JSX.Element {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, user, isLoading: isAuthLoading } = useAuth();
+  const { refreshFarmData, isLoading: isFarmLoading, farmData } = useFarm();
 
-  if (isLoading) {
+  useEffect(() => {
+    // Determine the user_id from the authenticated user object
+    const userId = user?.user_id || user?.id || '11111111-1111-1111-1111-111111111111';
+
+    if (isAuthenticated && userId && !farmData && !isFarmLoading) {
+      refreshFarmData(userId);
+    }
+  }, [isAuthenticated, user, farmData, isFarmLoading]);
+
+  if (isAuthLoading || (isAuthenticated && !farmData)) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.surface }}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -42,11 +53,13 @@ function Navigation(): React.JSX.Element {
 function App(): React.JSX.Element {
   return (
     <AuthProvider>
-      <ReminderProvider>
-        <NavigationContainer>
-          <Navigation />
-        </NavigationContainer>
-      </ReminderProvider>
+      <FarmProvider>
+        <ReminderProvider>
+          <NavigationContainer>
+            <Navigation />
+          </NavigationContainer>
+        </ReminderProvider>
+      </FarmProvider>
     </AuthProvider>
   );
 }

@@ -11,17 +11,15 @@ const IconPlaceholder = ({ name, color, size }: { name: string, color: string, s
   </Text>
 );
 
-const BLOCKS = [
-  { id: '1', name: 'Block A - Shiraz', location: 'Napa Valley, CA' },
-  { id: '2', name: 'Block B - Cabernet', location: 'Napa Valley, CA' },
-  { id: '3', name: 'Block C - Merlot', location: 'Sonoma, CA' },
-];
+import { useAuth } from '../context/AuthContext';
+import { useFarm } from '../context/FarmContext';
 
 export const GlobalHeader = () => {
   const insets = useSafeAreaInsets();
-  
-  const [activeSector, setActiveSector] = useState(BLOCKS[0]);
+  const { farmData, activeBlock, setActiveBlockById } = useFarm();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  if (!farmData || !activeBlock) return null;
 
   return (
     <>
@@ -29,12 +27,12 @@ export const GlobalHeader = () => {
         <View style={styles.topAppBarLeft}>
           <IconPlaceholder name="location_on" color={colors.secondary} size={18} />
           <View>
-            <Text style={styles.headerSubtitle}>ACTIVE SECTOR</Text>
+            <Text style={styles.headerSubtitle}>{farmData.farm_name.toUpperCase()}</Text>
             <TouchableOpacity 
               style={styles.dropdownSelector} 
               onPress={() => setIsDropdownOpen(true)}
             >
-              <Text style={styles.headerTitle}>{activeSector.name}</Text>
+              <Text style={styles.headerTitle}>{activeBlock.crop} - {activeBlock.lanslu}</Text>
               <IconPlaceholder name="expand_more" color={colors.secondary} size={20} />
             </TouchableOpacity>
           </View>
@@ -51,19 +49,19 @@ export const GlobalHeader = () => {
       <Modal visible={isDropdownOpen} transparent animationType="fade">
         <TouchableOpacity style={styles.modalOverlay} onPress={() => setIsDropdownOpen(false)} activeOpacity={1}>
           <View style={[styles.dropdownMenu, { marginTop: insets.top + 50 }]}>
-            {BLOCKS.map((block) => (
+            {farmData.blocks.map((block) => (
               <TouchableOpacity 
-                key={block.id} 
-                style={[styles.dropdownItem, activeSector.id === block.id && styles.dropdownItemActive]}
+                key={block.block_id} 
+                style={[styles.dropdownItem, activeBlock.block_id === block.block_id && styles.dropdownItemActive]}
                 onPress={() => {
-                  setActiveSector(block);
+                  setActiveBlockById(block.block_id);
                   setIsDropdownOpen(false);
                 }}
               >
-                <Text style={[styles.dropdownItemText, activeSector.id === block.id && {color: colors.primary, fontWeight: '800'}]}>
-                  {block.name}
+                <Text style={[styles.dropdownItemText, activeBlock.block_id === block.block_id && {color: colors.primary, fontWeight: '800'}]}>
+                  {block.crop} - {block.lanslu}
                 </Text>
-                {activeSector.id === block.id && <IconPlaceholder name="check_circle" color={colors.primary} size={16} />}
+                {activeBlock.block_id === block.block_id && <IconPlaceholder name="check_circle" color={colors.primary} size={16} />}
               </TouchableOpacity>
             ))}
           </View>

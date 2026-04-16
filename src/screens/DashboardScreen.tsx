@@ -8,6 +8,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
+import { useFarm } from '../context/FarmContext';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 
 const IconPlaceholder = ({ name, color, size }: { name: string, color: string, size: number }) => (
   <Text style={{ color, fontSize: size, fontWeight: 'bold' }}>
@@ -56,6 +59,37 @@ const DisplayStatCard = ({ iconName, iconBg, iconColor, title, value, changeText
 // Removed BlockCard component
 
 export const DashboardScreen = ({ navigation }: any) => {
+  const { activeBlock, isLoading, refreshActiveBlockSensors } = useFarm();
+
+  // Smart Refresh: Fetch latest sensors every time the user looks at the Dashboard
+  useFocusEffect(
+    useCallback(() => {
+      if (activeBlock) {
+        console.log('🔄 [Dashboard] Auto-refreshing sensor data...');
+        refreshActiveBlockSensors(activeBlock.block_id);
+      }
+    }, [activeBlock?.block_id])
+  );
+
+  if (!activeBlock) return null;
+
+  const getSensorData = (sensorType: string) => {
+    return activeBlock.sensors.sensors.find(s => s.sensor_type === sensorType);
+  };
+
+  const formatValue = (sensorType: string, dummyValue: string) => {
+    const sensor = getSensorData(sensorType);
+    if (!sensor) return dummyValue;
+    return `${sensor.value}${sensor.unit}`;
+  };
+
+  // DEBUG: Log the data being displayed
+  console.warn(`📊 [Dashboard] Rendering Stat Cards for: ${activeBlock.lanslu}`);
+  console.log('   💧 Moisture:', formatValue('soil_moisture', 'N/A'));
+  console.log('   🌡️ Temp:', formatValue('soil_temperature', 'N/A'));
+  console.log('   🧪 pH:', formatValue('ph_level', 'N/A'));
+  console.log('   💨 Humid:', formatValue('humidity', 'N/A'));
+
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <ScrollView 
@@ -67,30 +101,29 @@ export const DashboardScreen = ({ navigation }: any) => {
         <View style={styles.quickStatsGrid}>
           <DisplayStatCard 
             iconName="water_drop" iconBg="rgba(1, 45, 29, 0.1)" iconColor={colors.primary}
-            title="MOISTURE" value="42.8%" changeText="-2.4% vs Yesterday" changeIcon="trending_down" isError={true} 
+            title="MOISTURE" value={formatValue('soil_moisture', '25%')} changeText={getSensorData('soil_moisture')?.status || 'Normal'} changeIcon="check_circle" isError={false} 
           />
           <DisplayStatCard 
             iconName="device_thermostat" iconBg="rgba(0, 108, 72, 0.1)" iconColor={colors.secondary}
-            title="TEMP" value="24°C" changeText="+1.2% vs Avg" changeIcon="trending_up" isError={false} 
+            title="TEMP" value={formatValue('soil_temperature', '22°C')} changeText="Soil Temperature" changeIcon="check_circle" isError={false} 
           />
           <DisplayStatCard 
             iconName="humidity_low" iconBg="rgba(0, 69, 45, 0.1)" iconColor={colors.tertiary}
-            title="HUMIDITY" value="68%" changeText="Stable" changeIcon="remove" isError={false} 
+            title="HUMIDITY" value={formatValue('humidity', '45%')} changeText="Stable" changeIcon="remove" isError={false} 
           />
           <DisplayStatCard 
             iconName="science" iconBg="rgba(176, 241, 204, 0.4)" iconColor={colors.tertiary}
-            title="pH LEVEL" value="6.4" changeText="Target: 6.2-6.8" changeIcon="check_circle" isError={false} 
+            title="pH LEVEL" value={formatValue('ph_level', '6.5')} changeText="Ideal Range" changeIcon="check_circle" isError={false} 
           />
           <DisplayStatCard 
             iconName="wb_sunny" iconBg="rgba(255, 218, 106, 0.2)" iconColor="#D97706"
-            title="SUNLIGHT" value="850 W/m²" changeText="Optimal" changeIcon="trending_up" isError={false} 
+            title="SUNLIGHT" value="850 W/m²" changeText="Optimal (Dummy)" changeIcon="wb_sunny" isError={false} 
           />
           <DisplayStatCard 
             iconName="compost" iconBg="rgba(1, 45, 29, 0.1)" iconColor={colors.primary}
-            title="FERTILITY" value="78 EC" changeText="Stable" changeIcon="remove" isError={false} 
+            title="FERTILITY" value="78 EC" changeText="Stable (Dummy)" changeIcon="check_circle" isError={false} 
           />
           
-          {/* Adding bottom padding so nothing hides behind bottom bar */}
           <View style={{height: 48, width: '100%'}} />
         </View>
       </ScrollView>
