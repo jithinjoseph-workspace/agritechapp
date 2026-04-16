@@ -11,6 +11,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
+import { useAuth } from '../context/AuthContext';
+import { useFarm } from '../context/FarmContext';
+import { authService } from '../api/authService';
+import { useState, useEffect } from 'react';
+import { ActivityIndicator, Alert } from 'react-native';
 
 const IconPlaceholder = ({ name, color, size }: { name: string, color: string, size: number }) => (
   <Text style={{ color, fontSize: size, fontWeight: 'bold' }}>
@@ -29,61 +34,105 @@ const IconPlaceholder = ({ name, color, size }: { name: string, color: string, s
   </Text>
 );
 
-const SensorCard = ({ iconName, tag, label, defaultValue, unit }: any) => (
-  <View style={styles.cardContainer}>
-    <View style={styles.cardHeader}>
-      <IconPlaceholder name={iconName} color={colors.secondary} size={20} />
-      <Text style={styles.cardTag}>{tag}</Text>
-    </View>
-    <Text style={styles.cardLabel}>{label}</Text>
-    <View style={styles.inputRow}>
-      <TextInput 
-        style={styles.cardInput} 
-        defaultValue={defaultValue}
-        keyboardType="numeric"
-        placeholderTextColor={colors.outlineVariant}
-      />
-      <Text style={styles.cardUnit}>{unit}</Text>
-    </View>
-  </View>
-);
-
 export const SensorScreen = ({ navigation }: any) => {
+  const { user } = useAuth();
+  const { activeBlock, refreshActiveBlockSensors } = useFarm();
+
+  const [ph, setPh] = useState('');
+  const [temp, setTemp] = useState(''); // Maps specifically to Soil Temperature
+  const [moisture, setMoisture] = useState('');
+  const [sunlight, setSunlight] = useState('');
+  const [humidity, setHumidity] = useState('');
+  const [fertility, setFertility] = useState('');
+
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (activeBlock && activeBlock.sensors && activeBlock.sensors.sensors) {
+      const getVal = (type: string) => activeBlock.sensors.sensors.find(s => s.sensor_type === type)?.value.toString() || '';
+      setPh(getVal('ph_level'));
+      setTemp(getVal('soil_temperature')); // Targeted to soil temp
+      setMoisture(getVal('soil_moisture'));
+      setHumidity(getVal('humidity'));
+      setSunlight('850');
+      setFertility('78');
+    }
+  }, [activeBlock]);
+
+  const handleSave = async () => {
+    console.warn('🚀 [DEBUG] handleSave triggered');
+    if (!activeBlock) {
+      console.error('❌ [DEBUG] Save failed: No activeBlock found in context');
+      Alert.alert("Debug Error", "No farm block is selected. Please select a block on the dashboard first.");
+      return;
+    }
+
+    Alert.alert("DEBUG", "Starting API Call to " + activeBlock.block_id);
+    setIsLoading(true);
+    try {
+      const payload = {
+        moisture: parseFloat(moisture) || 0,
+        temp: parseFloat(temp) || 0,
+        humidity: parseFloat(humidity) || 0,
+        ph_level: parseFloat(ph) || 0,
+        sunlight: parseFloat(sunlight) || 0,
+        fertility: parseFloat(fertility) || 0,
+      };
+      
+      console.warn('📡 [API POST] Payload:', JSON.stringify(payload));
+      await authService.postSensorSnapshot(activeBlock.block_id, payload);
+      
+      console.warn('🔄 [DEBUG] Snapshot saved. Starting refresh...');
+      await refreshActiveBlockSensors(activeBlock.block_id);
+      
+      Alert.alert("Success", "Soil data updated and refreshed from API.", [
+        { text: "OK", onPress: () => navigation.navigate('DashboardTab') }
+      ]);
+    } catch (e) {
+      Alert.alert("Error", "Could not save values.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      {/* Main Content */}
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.headerBlock}>
-          <Text style={styles.screenTitle}>Sensor Input</Text>
-          <Text style={styles.screenDescription}>
-            Record manual observations or sync from connected IoT nodes for precise field analysis.
-          </Text>
+          <Text style={styles.screenTitle}>{activeBlock?.crop || 'Crop'} Details</Text>
+          <Text style={styles.blockSubtitle}>{activeBlock?.lanslu || 'RECORD OBSERVATIONS'}</Text>
+          <Text style={styles.screenDescription}>Manual entry for Soil Temperature and other key sensors.</Text>
         </View>
-
-        {/* Bento Grid */}
         <View style={styles.grid}>
-          <SensorCard iconName="science" tag="REAL-TIME" label="pH Level" defaultValue="6.5" unit="pH" />
-          <SensorCard iconName="thermostat" tag="THERMAL" label="Plant Temperature" defaultValue="24.0" unit="°C" />
-          <SensorCard iconName="water_drop" tag="VOLUMETRIC" label="Soil Moisture" defaultValue="42" unit="%" />
-          <SensorCard iconName="light_mode" tag="PAR" label="Sunlight Intensity" defaultValue="850" unit="W/m²" />
-          <SensorCard iconName="humidity_mid" tag="ATMOSPHERE" label="Air Humidity" defaultValue="60" unit="%" />
-          <SensorCard iconName="compost" tag="NUTRIENTS" label="Soil Fertility" defaultValue="78" unit="EC" />
+          {[
+            { label: 'pH Level', value: ph, setter: setPh, unit: 'pH', icon: 'science', tag: 'SOIL HEALTH' },
+            { label: 'Soil Temperature', value: temp, setter: setTemp, unit: '°C', icon: 'thermostat', tag: 'THERMAL' },
+            { label: 'Soil Moisture', value: moisture, setter: setMoisture, unit: '%', icon: 'water_drop', tag: 'MOISTURE' },
+            { label: 'Sunlight', value: sunlight, setter: setSunlight, unit: 'W/m²', icon: 'light_mode', tag: 'SOLAR' },
+            { label: 'Humidity', value: humidity, setter: setHumidity, unit: '%', icon: 'humidity_mid', tag: 'ATMOSPHERE' },
+            { label: 'Soil Fertility', value: fertility, setter: setFertility, unit: 'EC', icon: 'compost', tag: 'NUTRIENTS' },
+          ].map((item, idx) => (
+            <View key={idx} style={styles.cardContainer}>
+              <View style={styles.cardHeader}>
+                <IconPlaceholder name={item.icon} color={colors.secondary} size={20} />
+                <Text style={styles.cardTag}>{item.tag}</Text>
+              </View>
+              <Text style={styles.cardLabel}>{item.label}</Text>
+              <View style={styles.inputRow}>
+                <TextInput style={styles.cardInput} value={item.value} onChangeText={item.setter} keyboardType="numeric" />
+                <Text style={styles.cardUnit}>{item.unit}</Text>
+              </View>
+            </View>
+          ))}
         </View>
-
-        {/* Call to Action */}
         <View style={styles.ctaContainer}>
-          <TouchableOpacity style={styles.syncButton} activeOpacity={0.8}>
-            <IconPlaceholder name="sync" color={colors.onPrimary} size={20} />
-            <Text style={styles.syncButtonText}>Sync & Update</Text>
+          <TouchableOpacity style={styles.syncButton} onPress={handleSave} disabled={isLoading}>
+            {isLoading ? <ActivityIndicator color={colors.onPrimary} /> : (
+              <><IconPlaceholder name="sync" color={colors.onPrimary} size={20} /><Text style={styles.syncButtonText}>Save Observations</Text></>
+            )}
           </TouchableOpacity>
-          <Text style={styles.lastSyncedText}>LAST SYNCED: 14:22 PM • STATION A-12</Text>
         </View>
       </ScrollView>
-
-
     </SafeAreaView>
   );
 };
@@ -99,6 +148,14 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.primary,
     marginBottom: 8,
+  },
+  blockSubtitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: colors.secondary,
+    letterSpacing: 2,
+    marginBottom: 12,
+    textTransform: 'uppercase',
   },
   screenDescription: {
     fontSize: 14,
@@ -185,12 +242,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-  lastSyncedText: {
+  blockNameInfo: {
     marginTop: 16,
     fontSize: 11,
-    fontWeight: '500',
+    fontWeight: 'bold',
     textTransform: 'uppercase',
-    letterSpacing: 1,
-    color: colors.onSurfaceVariant,
+    letterSpacing: 1.5,
+    color: colors.secondary,
   },
 });

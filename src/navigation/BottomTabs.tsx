@@ -9,11 +9,6 @@ import { HistoryScreen } from '../screens/HistoryScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { GlobalHeader } from '../components/GlobalHeader';
 
-// Enable LayoutAnimation on Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
-
 const Tab = createBottomTabNavigator();
 
 const IconPlaceholder = ({ name, color, isActive }: { name: string, color: string, isActive: boolean }) => (

@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   input: {
-    wight: '100%',
+    width: '100%',
     backgroundColor: colors.surfaceContainerLowest,
     borderWidth: 1,
     borderColor: 'rgba(193, 200, 194, 0.3)', // outlineVariant with opacity
