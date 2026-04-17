@@ -55,7 +55,7 @@ export const LoginScreen = ({ navigation }: any) => {
         error.response?.data?.detail ||
         error.response?.data?.message ||
         (error.message === 'Network Error'
-          ? 'Unable to reach the API server. Make sure the backend is running on port 8000 and the app can access it.'
+          ? 'Unable to reach the API server. Make sure the backend is running on port 8000. For a USB-debugged Android phone, run: adb reverse tcp:8000 tcp:8000'
           : error.message) ||
         'Unable to connect to server. Check your internet or API IP.';
       setErrorMessage(msg);
