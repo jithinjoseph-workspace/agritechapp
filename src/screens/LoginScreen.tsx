@@ -8,13 +8,13 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
-  Alert
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { authService } from '../api/authService';
 import { useAuth } from '../context/AuthContext';
+import { useFarm } from '../context/FarmContext';
 
 // Simple placeholder for Material Icons since react-native-vector-icons isn't installed.
 // In a real device you'd use <Icon name="eco" /> from react-native-vector-icons/MaterialIcons
@@ -24,7 +24,7 @@ const IconPlaceholder = ({ name, color, size }: { name: string, color: string, s
   </Text>
 );
 
-export const LoginScreen = ({ navigation }: any) => {
+export const LoginScreen = (_props: any) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -32,6 +32,7 @@ export const LoginScreen = ({ navigation }: any) => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const { login } = useAuth();
+  const { clearFarmData, refreshFarmData } = useFarm();
 
   const handleLogin = async () => {
     console.log('👆 Login button pressed');
@@ -44,11 +45,21 @@ export const LoginScreen = ({ navigation }: any) => {
     setErrorMessage(null);
 
     try {
+      await authService.clearSession();
+      clearFarmData();
+
       const data = await authService.mobileLogin(email.trim(), password);
       console.log('Login successful:', data);
       
       // Update global auth state
       await login(data);
+
+      const nextUserId = data?.user?.id || data?.user?.user_id || data?.id || data?.user_id;
+      if (!nextUserId) {
+        throw new Error('Login response did not include a valid user ID.');
+      }
+
+      await refreshFarmData(nextUserId);
     } catch (error: any) {
       console.error('Login error:', error);
       const msg =

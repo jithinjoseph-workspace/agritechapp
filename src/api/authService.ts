@@ -3,11 +3,20 @@ import { NativeModules } from 'react-native';
 import { API_BASE_URL, ENDPOINTS } from '../config/env';
 
 const TOKEN_KEY = '@agritech_auth_token';
+const USER_KEY = '@agritech_auth_user';
 
 type StorageAdapter = {
   getItem: (key: string) => Promise<string | null>;
   setItem: (key: string, value: string) => Promise<void>;
   removeItem: (key: string) => Promise<void>;
+};
+
+export type StoredAuthUser = {
+  id?: string;
+  user_id?: string;
+  name?: string | null;
+  email?: string;
+  role?: string | null;
 };
 
 const memoryStorage = new Map<string, string>();
@@ -42,7 +51,7 @@ function getStorage(): StorageAdapter {
         removeItem: (key: string) => asyncStorage.removeItem(key),
       };
       return cachedStorage;
-    } catch (error) {
+    } catch {
       console.warn('[authService] AsyncStorage package failed to initialize, using memory fallback.');
     }
   } else {
@@ -108,7 +117,7 @@ export const authService = {
   async getToken() {
     try {
       return await getStorage().getItem(TOKEN_KEY);
-    } catch (error) {
+    } catch {
       return null;
     }
   },
@@ -119,6 +128,40 @@ export const authService = {
     } catch (error) {
       console.error('Remove token error', error);
     }
+  },
+
+  async saveUser(user: StoredAuthUser) {
+    try {
+      await getStorage().setItem(USER_KEY, JSON.stringify(user));
+    } catch (error) {
+      console.error('Save user error', error);
+    }
+  },
+
+  async getUser(): Promise<StoredAuthUser | null> {
+    try {
+      const stored = await getStorage().getItem(USER_KEY);
+      if (!stored) {
+        return null;
+      }
+
+      return JSON.parse(stored) as StoredAuthUser;
+    } catch (error) {
+      console.error('Get user error', error);
+      return null;
+    }
+  },
+
+  async removeUser() {
+    try {
+      await getStorage().removeItem(USER_KEY);
+    } catch (error) {
+      console.error('Remove user error', error);
+    }
+  },
+
+  async clearSession() {
+    await Promise.all([this.removeToken(), this.removeUser()]);
   },
 
   async getUserDetails(userId: string) {

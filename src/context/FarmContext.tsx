@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { authService } from '../api/authService';
+import { useAuth } from './AuthContext';
 
 interface SensorReading {
   sensor_id: string;
@@ -50,6 +51,7 @@ interface FarmContextType {
   refreshFarmData: (userId: string) => Promise<void>;
   refreshActiveBlockSensors: (blockId: string) => Promise<void>;
   setActiveBlockById: (id: string) => void;
+  clearFarmData: () => void;
 }
 
 const FarmContext = createContext<FarmContextType>({
@@ -59,29 +61,59 @@ const FarmContext = createContext<FarmContextType>({
   refreshFarmData: async () => {},
   refreshActiveBlockSensors: async () => {},
   setActiveBlockById: () => {},
+  clearFarmData: () => {},
 });
 
 export const FarmProvider = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, user } = useAuth();
   const [farmData, setFarmData] = useState<FarmDetails | null>(null);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  const clearFarmData = useCallback(() => {
+    setFarmData(null);
+    setActiveBlockId(null);
+    setIsLoading(false);
+  }, []);
+
   const refreshFarmData = useCallback(async (userId: string) => {
+    if (farmData?.user_id !== userId) {
+      setFarmData(null);
+      setActiveBlockId(null);
+    }
     setIsLoading(true);
     try {
-      const data = await authService.getUserDetails(userId);
+      const data: FarmDetails = await authService.getUserDetails(userId);
       setFarmData(data);
-      
-      // Default to the first block if none is selected
-      if (data.blocks && data.blocks.length > 0 && !activeBlockId) {
-        setActiveBlockId(data.blocks[0].block_id);
-      }
+
+      setActiveBlockId(previousBlockId => {
+        if (!data.blocks?.length) {
+          return null;
+        }
+
+        const stillValidSelection = previousBlockId
+          ? data.blocks.some(block => block.block_id === previousBlockId)
+          : false;
+
+        return stillValidSelection ? previousBlockId : data.blocks[0].block_id;
+      });
     } catch (error) {
       console.error('Failed to fetch farm data:', error);
+      setFarmData(null);
+      setActiveBlockId(null);
     } finally {
       setIsLoading(false);
     }
-  }, [activeBlockId]);
+  }, [farmData?.user_id]);
+
+  useEffect(() => {
+    const currentUserId = user?.user_id || user?.id || null;
+    if (isAuthenticated && currentUserId) {
+      return;
+    }
+
+    clearFarmData();
+  }, [clearFarmData, isAuthenticated, user?.id, user?.user_id]);
 
   const refreshActiveBlockSensors = useCallback(async (blockId: string) => {
     try {
@@ -129,13 +161,14 @@ export const FarmProvider = ({ children }: { children: React.ReactNode }) => {
   const activeBlock = farmData?.blocks.find(b => b.block_id === activeBlockId) || farmData?.blocks[0] || null;
 
   return (
-    <FarmContext.Provider value={{ 
+      <FarmContext.Provider value={{ 
       farmData, 
       activeBlock, 
       isLoading, 
       refreshFarmData, 
       refreshActiveBlockSensors,
-      setActiveBlockById 
+      setActiveBlockById,
+      clearFarmData,
     }}>
       {children}
     </FarmContext.Provider>

@@ -1,10 +1,10 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { authService } from '../api/authService';
+import { authService, StoredAuthUser } from '../api/authService';
 
 type AuthContextType = {
   isAuthenticated: boolean;
   isLoading: boolean;
-  user: any | null;
+  user: StoredAuthUser | null;
   login: (data: any) => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -19,15 +19,29 @@ const AuthContext = createContext<AuthContextType>({
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<any | null>(null);
+  const [user, setUser] = useState<StoredAuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const checkSession = async () => {
       try {
-        const token = await authService.getToken();
-        setIsAuthenticated(!!token);
-      } catch (e) {
+        const [token, storedUser] = await Promise.all([
+          authService.getToken(),
+          authService.getUser(),
+        ]);
+
+        if (token && storedUser) {
+          setUser(storedUser);
+          setIsAuthenticated(true);
+        } else {
+          if (token || storedUser) {
+            await authService.clearSession();
+          }
+          setUser(null);
+          setIsAuthenticated(false);
+        }
+      } catch {
+        setUser(null);
         setIsAuthenticated(false);
       } finally {
         setIsLoading(false);
@@ -37,13 +51,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const login = async (data: any) => {
-    // Note: authService.mobileLogin already saves the token
-    setUser(data.user || data); // Assume data contains user info or is the user info
+    const nextUser = (data?.user || data) as StoredAuthUser | null;
+    if (!nextUser?.id && !nextUser?.user_id) {
+      throw new Error('Login response did not include a valid user.');
+    }
+
+    await authService.saveUser(nextUser);
+    setUser(nextUser);
     setIsAuthenticated(true);
   };
 
   const logout = async () => {
-    await authService.removeToken();
+    await authService.clearSession();
     setUser(null);
     setIsAuthenticated(false);
   };
