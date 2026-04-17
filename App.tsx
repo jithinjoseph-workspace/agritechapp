@@ -16,19 +16,19 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 function Navigation(): React.JSX.Element {
   const { isAuthenticated, user, isLoading: isAuthLoading } = useAuth();
   const { refreshFarmData, isLoading: isFarmLoading, farmData } = useFarm();
+  const userId = user?.user_id || user?.id || null;
 
   useEffect(() => {
-    // Determine the user_id from the authenticated user object
-    const userId = user?.user_id || user?.id || '11111111-1111-1111-1111-111111111111';
-
-    if (isAuthenticated && userId && !farmData && !isFarmLoading) {
+    if (isAuthenticated && userId && !isFarmLoading && farmData?.user_id !== userId) {
       refreshFarmData(userId);
     }
-  }, [isAuthenticated, user, farmData, isFarmLoading]);
+  }, [farmData?.user_id, isAuthenticated, isFarmLoading, refreshFarmData, userId]);
 
-  if (isAuthLoading || (isAuthenticated && !farmData)) {
+  const isWaitingForFarmData = isAuthenticated && !!userId && farmData?.user_id !== userId;
+
+  if (isAuthLoading || isWaitingForFarmData) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.surface }}>
+      <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
@@ -63,5 +63,14 @@ function App(): React.JSX.Element {
     </AuthProvider>
   );
 }
+
+const styles = {
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    backgroundColor: colors.surface,
+  },
+};
 
 export default App;
