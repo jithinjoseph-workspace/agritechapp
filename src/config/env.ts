@@ -62,6 +62,8 @@ export const ENDPOINTS = {
     `${API_BASE_URL}/api/mobile/users/${userId}/details`,
   SUBMIT_SNAPSHOT: (blockId: string) =>
     `${API_BASE_URL}/api/mobile/blocks/${blockId}/sensor-snapshots`,
+  SNAPSHOT_HISTORY: (blockId: string) =>
+    `${API_BASE_URL}/api/mobile/blocks/${blockId}/sensor-snapshots/history`,
   LATEST_SNAPSHOT: (blockId: string) =>
     `${API_BASE_URL}/api/mobile/blocks/${blockId}/sensor-snapshots/latest`,
 };

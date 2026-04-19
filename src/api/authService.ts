@@ -19,6 +19,27 @@ export type StoredAuthUser = {
   role?: string | null;
 };
 
+export type SensorSnapshotHistorySensor = {
+  sensor_type: string;
+  label: string;
+  unit: string;
+  value: number;
+  status: string;
+};
+
+export type SensorSnapshotHistoryEntry = {
+  snapshot_id: string;
+  observed_at: string;
+  sensor_count: number;
+  sensors: SensorSnapshotHistorySensor[];
+};
+
+export type SensorSnapshotHistoryResponse = {
+  block_id: string;
+  block_name: string;
+  entries: SensorSnapshotHistoryEntry[];
+};
+
 const memoryStorage = new Map<string, string>();
 
 let cachedStorage: StorageAdapter | null | undefined;
@@ -223,6 +244,25 @@ export const authService = {
       return response.data;
     } catch (error: any) {
       console.error('[API Error - Latest Snapshot]:', error.message);
+      throw error;
+    }
+  },
+
+  async getSnapshotHistory(blockId: string): Promise<SensorSnapshotHistoryResponse> {
+    try {
+      const token = await this.getToken();
+      console.log('[API Request] GET', ENDPOINTS.SNAPSHOT_HISTORY(blockId));
+
+      const response = await apiClient.get(ENDPOINTS.SNAPSHOT_HISTORY(blockId), {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      console.log('[API Success] Snapshot History Loaded');
+      return response.data;
+    } catch (error: any) {
+      console.error('[API Error - Snapshot History]:', error.message);
       throw error;
     }
   },

@@ -1,47 +1,176 @@
-import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { authService, SensorSnapshotHistoryEntry } from '../api/authService';
 import { Card } from '../components/Card';
-import { colors } from '../theme/colors';
+import { useFarm } from '../context/FarmContext';
 import { HistoryScreenProps } from '../navigation/types';
+import { colors } from '../theme/colors';
 
-interface HistoryItem {
-  id: string;
-  date: string;
-  event: string;
-  details: string;
+interface HistoryMetricMap {
+  moisture?: string;
+  temperature?: string;
+  humidity?: string;
+  ph?: string;
+  sunlight?: string;
+  fertility?: string;
 }
 
-const mockHistory: HistoryItem[] = [
-  { id: '1', date: 'Today, 08:30 AM', event: 'Watering Triggered', details: 'Moisture dropped to 38%, auto-irrigation activated.' },
-  { id: '2', date: 'Yesterday, 04:15 PM', event: 'Temperature Alert', details: 'Temp increased to 32°C. Ventilation system activated.' },
-  { id: '3', date: 'Oct 23, 10:00 AM', event: 'Fertilization Completed', details: 'Nitrogen levels replenished based on schedule.' },
-  { id: '4', date: 'Oct 21, 09:20 AM', event: 'System Check', details: 'All sensors calibrated and working nominally.' },
-];
+function formatObservedAt(value: string) {
+  const date = new Date(value);
 
-export const HistoryScreen: React.FC<HistoryScreenProps> = ({ navigation }) => {
-  const renderItem = ({ item }: { item: HistoryItem }) => (
-    <Card style={styles.historyCard}>
-      <Text style={styles.date}>{item.date}</Text>
-      <Text style={styles.event}>{item.event}</Text>
-      <Text style={styles.details}>{item.details}</Text>
-    </Card>
+  return new Intl.DateTimeFormat('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(date);
+}
+
+function buildMetricMap(entry: SensorSnapshotHistoryEntry): HistoryMetricMap {
+  const metrics: HistoryMetricMap = {};
+
+  entry.sensors.forEach(sensor => {
+    const text = `${sensor.value} ${sensor.unit}`.trim();
+
+    switch (sensor.sensor_type) {
+      case 'soil_moisture':
+        metrics.moisture = text;
+        break;
+      case 'soil_temperature':
+        metrics.temperature = text;
+        break;
+      case 'humidity':
+        metrics.humidity = text;
+        break;
+      case 'ph_level':
+        metrics.ph = text;
+        break;
+      case 'sunlight':
+        metrics.sunlight = text;
+        break;
+      case 'fertility':
+        metrics.fertility = text;
+        break;
+      default:
+        break;
+    }
+  });
+
+  return metrics;
+}
+
+export const HistoryScreen: React.FC<HistoryScreenProps> = () => {
+  const { activeBlock } = useFarm();
+  const [entries, setEntries] = useState<SensorSnapshotHistoryEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const loadHistory = useCallback(async (mode: 'initial' | 'refresh' = 'initial') => {
+    if (!activeBlock?.block_id) {
+      setEntries([]);
+      setErrorMessage('Select a block from the dashboard to view sensor history.');
+      setIsLoading(false);
+      setIsRefreshing(false);
+      return;
+    }
+
+    if (mode === 'refresh') {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
+
+    try {
+      setErrorMessage(null);
+      const response = await authService.getSnapshotHistory(activeBlock.block_id);
+      setEntries(response.entries || []);
+    } catch (error: any) {
+      setErrorMessage(
+        error?.response?.data?.detail ||
+          error?.message ||
+          'Unable to load sensor history right now.',
+      );
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [activeBlock?.block_id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadHistory();
+    }, [loadHistory]),
   );
+
+  const renderItem = ({ item }: { item: SensorSnapshotHistoryEntry }) => {
+    const metrics = buildMetricMap(item);
+
+    return (
+      <Card style={styles.historyCard}>
+        <Text style={styles.date}>{formatObservedAt(item.observed_at)}</Text>
+        <Text style={styles.event}>Manual sensor entry</Text>
+        <Text style={styles.blockLabel}>{activeBlock?.lanslu || activeBlock?.crop || 'Selected block'}</Text>
+
+        <View style={styles.metricGrid}>
+          <Text style={styles.metricText}>Moisture: {metrics.moisture || '-'}</Text>
+          <Text style={styles.metricText}>Temp: {metrics.temperature || '-'}</Text>
+          <Text style={styles.metricText}>Humidity: {metrics.humidity || '-'}</Text>
+          <Text style={styles.metricText}>pH: {metrics.ph || '-'}</Text>
+          <Text style={styles.metricText}>Sunlight: {metrics.sunlight || '-'}</Text>
+          <Text style={styles.metricText}>Fertility: {metrics.fertility || '-'}</Text>
+        </View>
+      </Card>
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.centerState}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.stateText}>Loading block history...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Action History</Text>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.linkText}>Back</Text>
-        </TouchableOpacity>
+        <Text style={styles.title}>Sensor History</Text>
+        <Text style={styles.subtitle}>{activeBlock?.lanslu || activeBlock?.crop || 'No block selected'}</Text>
       </View>
 
+      {errorMessage ? (
+        <View style={styles.messageBox}>
+          <Text style={styles.messageText}>{errorMessage}</Text>
+        </View>
+      ) : null}
+
       <FlatList
-        data={mockHistory}
-        keyExtractor={(item) => item.id}
+        data={entries}
+        keyExtractor={item => item.snapshot_id}
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={() => loadHistory('refresh')}
+            tintColor={colors.primary}
+          />
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyTitle}>No sensor entries yet</Text>
+            <Text style={styles.emptyText}>
+              Save observations from the Sensors tab for this block and they will appear here.
+            </Text>
+          </View>
+        }
       />
     </SafeAreaView>
   );
@@ -53,9 +182,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
     paddingHorizontal: 24,
     paddingVertical: 16,
   },
@@ -64,13 +190,16 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.onSurface,
   },
-  linkText: {
-    color: colors.primary,
-    fontWeight: '600',
+  subtitle: {
+    marginTop: 6,
+    color: colors.onSurfaceVariant,
+    fontSize: 14,
+    fontWeight: '500',
   },
   listContent: {
     padding: 24,
     gap: 16,
+    paddingBottom: 120,
   },
   historyCard: {
     padding: 16,
@@ -86,9 +215,58 @@ const styles = StyleSheet.create({
     color: colors.onSurface,
     marginBottom: 6,
   },
-  details: {
+  blockLabel: {
+    fontSize: 14,
+    color: colors.onSurfaceVariant,
+    marginBottom: 12,
+  },
+  metricGrid: {
+    gap: 8,
+  },
+  metricText: {
     fontSize: 14,
     color: colors.onSurfaceVariant,
     lineHeight: 20,
+  },
+  centerState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    gap: 12,
+  },
+  stateText: {
+    fontSize: 14,
+    color: colors.onSurfaceVariant,
+    textAlign: 'center',
+  },
+  emptyState: {
+    paddingVertical: 48,
+    alignItems: 'center',
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.onSurface,
+    marginBottom: 8,
+  },
+  emptyText: {
+    maxWidth: 280,
+    textAlign: 'center',
+    color: colors.onSurfaceVariant,
+    lineHeight: 20,
+  },
+  messageBox: {
+    marginHorizontal: 24,
+    marginBottom: 8,
+    backgroundColor: colors.errorContainer,
+    borderRadius: 12,
+    padding: 12,
+  },
+  messageText: {
+    color: colors.onErrorContainer,
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });
