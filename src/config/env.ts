@@ -48,7 +48,7 @@ function resolveApiHost() {
     // For USB debugging or adb reverse we should talk to localhost.
     // If you're using the Android emulator without port forwarding,
     // set MANUAL_API_HOST to 10.0.2.2.
-    return '127.0.0.1';
+    return '10.0.2.2';
   }
 
   return '127.0.0.1';
