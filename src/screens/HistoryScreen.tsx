@@ -141,7 +141,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Sensor History</Text>
+        <Text style={styles.title}>History</Text>
         <Text style={styles.subtitle}>{activeBlock?.lanslu || activeBlock?.crop || 'No block selected'}</Text>
       </View>
 
@@ -182,11 +182,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   header: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '800',
     color: colors.onSurface,
   },
@@ -197,12 +198,16 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   listContent: {
-    padding: 24,
-    gap: 16,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    gap: 14,
     paddingBottom: 120,
   },
   historyCard: {
-    padding: 16,
+    padding: 18,
+    borderRadius: 20,
+    backgroundColor: colors.surfaceContainerLowest,
+    borderColor: colors.outlineVariant,
   },
   date: {
     fontSize: 12,
@@ -221,7 +226,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   metricGrid: {
-    gap: 8,
+    gap: 6,
   },
   metricText: {
     fontSize: 14,
@@ -243,6 +248,7 @@ const styles = StyleSheet.create({
   emptyState: {
     paddingVertical: 48,
     alignItems: 'center',
+    paddingHorizontal: 20,
   },
   emptyTitle: {
     fontSize: 18,

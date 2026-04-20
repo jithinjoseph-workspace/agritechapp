@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { authService } from '../api/authService';
 import { useAuth } from './AuthContext';
 
@@ -76,35 +76,39 @@ export const FarmProvider = ({ children }: { children: React.ReactNode }) => {
     setIsLoading(false);
   }, []);
 
-  const refreshFarmData = useCallback(async (userId: string) => {
-    if (farmData?.user_id !== userId) {
-      setFarmData(null);
-      setActiveBlockId(null);
-    }
-    setIsLoading(true);
-    try {
-      const data: FarmDetails = await authService.getUserDetails(userId);
-      setFarmData(data);
+  const refreshFarmData = useCallback(
+    async (userId: string) => {
+      if (farmData?.user_id !== userId) {
+        setFarmData(null);
+        setActiveBlockId(null);
+      }
 
-      setActiveBlockId(previousBlockId => {
-        if (!data.blocks?.length) {
-          return null;
-        }
+      setIsLoading(true);
+      try {
+        const data: FarmDetails = await authService.getUserDetails(userId);
+        setFarmData(data);
 
-        const stillValidSelection = previousBlockId
-          ? data.blocks.some(block => block.block_id === previousBlockId)
-          : false;
+        setActiveBlockId(previousBlockId => {
+          if (!data.blocks?.length) {
+            return null;
+          }
 
-        return stillValidSelection ? previousBlockId : data.blocks[0].block_id;
-      });
-    } catch (error) {
-      console.error('Failed to fetch farm data:', error);
-      setFarmData(null);
-      setActiveBlockId(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [farmData?.user_id]);
+          const stillValidSelection = previousBlockId
+            ? data.blocks.some(block => block.block_id === previousBlockId)
+            : false;
+
+          return stillValidSelection ? previousBlockId : data.blocks[0].block_id;
+        });
+      } catch (error) {
+        console.error('Failed to fetch farm data:', error);
+        setFarmData(null);
+        setActiveBlockId(null);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [farmData?.user_id],
+  );
 
   useEffect(() => {
     const currentUserId = user?.user_id || user?.id || null;
@@ -118,22 +122,18 @@ export const FarmProvider = ({ children }: { children: React.ReactNode }) => {
   const refreshActiveBlockSensors = useCallback(async (blockId: string) => {
     try {
       const latestData = await authService.getLatestSnapshot(blockId);
-      
+
       setFarmData(prev => {
-        if (!prev) return prev;
+        if (!prev) {
+          return prev;
+        }
 
         const updatedBlocks = prev.blocks.map(block => {
-          if (block.block_id !== blockId) return block;
+          if (block.block_id !== blockId) {
+            return block;
+          }
 
-          console.log(`🔄 [Context] Updating sensors for block: ${block.lanslu}`);
-
-          const updatedSensors = Array.isArray(latestData?.sensors)
-            ? latestData.sensors
-            : block.sensors.sensors;
-
-          updatedSensors.forEach((sensor: any) => {
-            console.log(`   📍 ${sensor.sensor_type}: ${sensor.value}`);
-          });
+          const updatedSensors = Array.isArray(latestData?.sensors) ? latestData.sensors : block.sensors.sensors;
 
           return {
             ...block,
@@ -143,7 +143,7 @@ export const FarmProvider = ({ children }: { children: React.ReactNode }) => {
               block_name: latestData?.block_name ?? block.sensors.block_name,
               generated_at: latestData?.generated_at ?? new Date().toISOString(),
               sensors: updatedSensors,
-            }
+            },
           };
         });
 
@@ -158,18 +158,20 @@ export const FarmProvider = ({ children }: { children: React.ReactNode }) => {
     setActiveBlockId(id);
   };
 
-  const activeBlock = farmData?.blocks.find(b => b.block_id === activeBlockId) || farmData?.blocks[0] || null;
+  const activeBlock = farmData?.blocks.find(block => block.block_id === activeBlockId) || farmData?.blocks[0] || null;
 
   return (
-      <FarmContext.Provider value={{ 
-      farmData, 
-      activeBlock, 
-      isLoading, 
-      refreshFarmData, 
-      refreshActiveBlockSensors,
-      setActiveBlockById,
-      clearFarmData,
-    }}>
+    <FarmContext.Provider
+      value={{
+        farmData,
+        activeBlock,
+        isLoading,
+        refreshFarmData,
+        refreshActiveBlockSensors,
+        setActiveBlockById,
+        clearFarmData,
+      }}
+    >
       {children}
     </FarmContext.Provider>
   );
