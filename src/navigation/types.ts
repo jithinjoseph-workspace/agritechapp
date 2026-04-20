@@ -5,6 +5,7 @@ import type { CompositeScreenProps } from '@react-navigation/native';
 export type RootStackParamList = {
   Login: undefined;
   MainTabs: undefined;
+  ProfileScreen: undefined;
 };
 
 export type BottomTabParamList = {

@@ -23,6 +23,8 @@ export const LoginScreen = (_props: any) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
 
   const { login } = useAuth();
   const { clearFarmData, refreshFarmData } = useFarm();
@@ -44,9 +46,7 @@ export const LoginScreen = (_props: any) => {
       await login(data);
 
       const nextUserId = data?.user?.id || data?.user?.user_id || data?.id || data?.user_id;
-      if (!nextUserId) {
-        throw new Error('Login response did not include a valid user ID.');
-      }
+      if (!nextUserId) throw new Error('Login response did not include a valid user ID.');
 
       await refreshFarmData(nextUserId);
     } catch (error: any) {
@@ -54,9 +54,9 @@ export const LoginScreen = (_props: any) => {
         error.response?.data?.detail ||
         error.response?.data?.message ||
         (error.message === 'Network Error'
-          ? 'Unable to reach the API server. Make sure the backend is running on port 8000. For a USB-debugged Android phone, run: adb reverse tcp:8000 tcp:8000'
+          ? 'Unable to reach the server. Please check your connection.'
           : error.message) ||
-        'Unable to connect to server. Check your internet or API IP.';
+        'Login failed. Please try again.';
       setErrorMessage(msg);
     } finally {
       setIsLoading(false);
@@ -65,114 +65,123 @@ export const LoginScreen = (_props: any) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.flex}
+      >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.heroPanel}>
-            <View style={styles.logoContainer}>
-              <AppIcon name="brand" size={28} color={colors.onPrimary} backgroundColor={colors.primary} />
+
+          {/* ── Brand / Hero ─────────────────────────── */}
+          <View style={styles.hero}>
+            {/* Logo mark */}
+            <View style={styles.logoRing}>
+              <View style={styles.logoBox}>
+                <AppIcon
+                  name="brand"
+                  size={28}
+                  color={colors.onPrimary}
+                  backgroundColor="transparent"
+                />
+              </View>
             </View>
-            <Text style={styles.eyebrow}>AgriTech Platform</Text>
-            <Text style={styles.title}>Farm operations dashboard</Text>
-            <Text style={styles.description}>
-              Sign in to review block performance, update sensor readings, and manage monitoring activity.
-            </Text>
+
+            <Text style={styles.appName}>AgriTech</Text>
+            <Text style={styles.tagline}>Farm Intelligence Platform</Text>
           </View>
 
-          <View style={styles.formCard}>
-            <Text style={styles.formTitle}>Sign in</Text>
-            <Text style={styles.formDescription}>Use your assigned account to continue.</Text>
+          {/* ── Form card ────────────────────────────── */}
+          <View style={styles.card}>
+            <Text style={styles.signInTitle}>Welcome back</Text>
+            <Text style={styles.signInSub}>Sign in to your account</Text>
 
-            {errorMessage ? (
-              <View style={styles.errorContainer}>
+            {/* Error banner */}
+            {!!errorMessage && (
+              <View style={styles.errorBanner}>
                 <Text style={styles.errorText}>{errorMessage}</Text>
               </View>
-            ) : null}
+            )}
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
-              <View style={styles.inputContainer}>
+            {/* Email field */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Email</Text>
+              <View style={[styles.fieldBox, emailFocused && styles.fieldBoxFocused]}>
                 <AppIcon
                   name="mail"
-                  size={16}
-                  color={colors.onSurfaceVariant}
-                  backgroundColor={colors.surfaceContainer}
-                  style={styles.inputIconLeft}
+                  size={15}
+                  color={emailFocused ? colors.primary : colors.onSurfaceVariant}
+                  backgroundColor="transparent"
                 />
                 <TextInput
-                  style={styles.input}
+                  style={styles.fieldInput}
                   placeholder="name@example.com"
                   placeholderTextColor={colors.outline}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   value={email}
                   onChangeText={setEmail}
+                  onFocus={() => setEmailFocused(true)}
+                  onBlur={() => setEmailFocused(false)}
                   editable={!isLoading}
                 />
               </View>
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password</Text>
-              <View style={styles.inputContainer}>
+            {/* Password field */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Password</Text>
+              <View style={[styles.fieldBox, passwordFocused && styles.fieldBoxFocused]}>
                 <AppIcon
                   name="lock"
-                  size={16}
-                  color={colors.onSurfaceVariant}
-                  backgroundColor={colors.surfaceContainer}
-                  style={styles.inputIconLeft}
+                  size={15}
+                  color={passwordFocused ? colors.primary : colors.onSurfaceVariant}
+                  backgroundColor="transparent"
                 />
                 <TextInput
-                  style={styles.input}
+                  style={styles.fieldInput}
                   placeholder="Enter your password"
                   placeholderTextColor={colors.outline}
                   secureTextEntry={!showPassword}
                   value={password}
                   onChangeText={setPassword}
+                  onFocus={() => setPasswordFocused(true)}
+                  onBlur={() => setPasswordFocused(false)}
                   editable={!isLoading}
                 />
                 <TouchableOpacity
-                  style={styles.inputIconRight}
                   onPress={() => setShowPassword(!showPassword)}
                   disabled={isLoading}
+                  style={styles.eyeBtn}
+                  activeOpacity={0.7}
                 >
                   <AppIcon
                     name={showPassword ? 'hide' : 'show'}
                     size={14}
                     color={colors.onSurfaceVariant}
-                    backgroundColor={colors.surfaceContainer}
+                    backgroundColor="transparent"
                   />
                 </TouchableOpacity>
               </View>
             </View>
 
-            <TouchableOpacity style={styles.forgotPasswordContainer} disabled={isLoading}>
-              <Text style={styles.forgotPasswordText}>Forgot password?</Text>
-            </TouchableOpacity>
-
+            {/* Sign In button */}
             <TouchableOpacity
-              style={[styles.primaryButton, isLoading && styles.primaryButtonDisabled]}
+              style={[styles.signInBtn, isLoading && styles.signInBtnLoading]}
               onPress={handleLogin}
               disabled={isLoading}
-              activeOpacity={0.9}
+              activeOpacity={0.88}
             >
               {isLoading ? (
-                <ActivityIndicator color={colors.onPrimary} size="small" />
+                <ActivityIndicator color="#ffffff" size="small" />
               ) : (
-                <>
-                  <Text style={styles.primaryButtonText}>Continue</Text>
-                  <AppIcon name="arrow" size={16} color={colors.onPrimary} />
-                </>
+                <Text style={styles.signInBtnText}>Sign In</Text>
               )}
             </TouchableOpacity>
           </View>
 
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Secure access for farm monitoring and sensor data workflows.</Text>
-          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -180,161 +189,159 @@ export const LoginScreen = (_props: any) => {
 };
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
+  flex: { flex: 1 },
+
   container: {
     flex: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: '#f0f4f2',
   },
+
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 32,
+    paddingVertical: 40,
   },
-  heroPanel: {
-    marginBottom: 24,
+
+  /* ── Hero ── */
+  hero: {
+    alignItems: 'center',
+    marginBottom: 36,
   },
-  logoContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
-    backgroundColor: colors.surfaceContainerLowest,
+  logoRing: {
+    padding: 6,
+    borderRadius: 28,
+    borderWidth: 2,
+    borderColor: colors.primaryContainer,
+    marginBottom: 18,
+  },
+  logoBox: {
+    width: 68,
+    height: 68,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.outlineVariant,
-    marginBottom: 20,
   },
-  eyebrow: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.secondary,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 8,
-  },
-  title: {
-    fontSize: 32,
+  appName: {
+    fontSize: 30,
     fontWeight: '800',
     color: colors.onSurface,
-    lineHeight: 38,
+    letterSpacing: 0.5,
+    marginBottom: 5,
   },
-  description: {
-    marginTop: 12,
-    fontSize: 15,
+  tagline: {
+    fontSize: 13,
+    fontWeight: '500',
     color: colors.onSurfaceVariant,
-    lineHeight: 22,
-    maxWidth: 420,
+    letterSpacing: 0.3,
   },
-  formCard: {
-    backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: 24,
+
+  /* ── Card ── */
+  card: {
+    backgroundColor: '#ffffff',
+    borderRadius: 28,
+    padding: 28,
     borderWidth: 1,
     borderColor: colors.outlineVariant,
-    padding: 24,
-    shadowColor: '#101828',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
+    shadowColor: '#1f3b2f',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
     shadowRadius: 24,
     elevation: 6,
   },
-  formTitle: {
+  signInTitle: {
     fontSize: 22,
-    fontWeight: '700',
+    fontWeight: '800',
     color: colors.onSurface,
+    textAlign: 'center',
+    marginBottom: 4,
+    letterSpacing: 0.2,
   },
-  formDescription: {
-    marginTop: 6,
-    marginBottom: 20,
-    fontSize: 14,
+  signInSub: {
+    fontSize: 13,
     color: colors.onSurfaceVariant,
+    textAlign: 'center',
+    marginBottom: 24,
   },
-  errorContainer: {
+
+  /* Error */
+  errorBanner: {
     backgroundColor: colors.errorContainer,
     borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 18,
     borderWidth: 1,
     borderColor: '#f3c3c0',
-    padding: 14,
-    marginBottom: 18,
   },
   errorText: {
     color: colors.onErrorContainer,
     fontSize: 13,
     fontWeight: '600',
     textAlign: 'center',
+    lineHeight: 18,
   },
-  inputGroup: {
-    marginBottom: 18,
+
+  /* Fields */
+  fieldGroup: {
+    marginBottom: 16,
   },
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.onSurface,
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.onSurfaceVariant,
+    textTransform: 'uppercase',
+    letterSpacing: 0.7,
     marginBottom: 8,
+    marginLeft: 2,
   },
-  inputContainer: {
-    position: 'relative',
-    justifyContent: 'center',
-  },
-  inputIconLeft: {
-    position: 'absolute',
-    left: 14,
-    zIndex: 1,
-  },
-  inputIconRight: {
-    position: 'absolute',
-    right: 14,
-    zIndex: 1,
-  },
-  input: {
-    width: '100%',
-    backgroundColor: colors.surfaceContainerLow,
-    borderWidth: 1,
-    borderColor: colors.outlineVariant,
-    borderRadius: 14,
-    paddingLeft: 52,
-    paddingRight: 52,
-    paddingVertical: 16,
-    fontSize: 15,
-    color: colors.onSurface,
-  },
-  forgotPasswordContainer: {
-    alignItems: 'flex-end',
-    marginBottom: 20,
-  },
-  forgotPasswordText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.secondary,
-  },
-  primaryButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 14,
-    paddingVertical: 16,
+  fieldBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+    backgroundColor: '#f0f4f2',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: colors.outlineVariant,
+    paddingHorizontal: 14,
+    paddingVertical: Platform.OS === 'ios' ? 14 : 0,
+    gap: 10,
   },
-  primaryButtonDisabled: {
+  fieldBoxFocused: {
+    borderColor: colors.primary,
+    backgroundColor: '#ffffff',
+  },
+  fieldInput: {
+    flex: 1,
+    fontSize: 15,
+    color: colors.onSurface,
+    paddingVertical: Platform.OS === 'android' ? 13 : 0,
+  },
+  eyeBtn: {
+    padding: 4,
+  },
+
+  /* Button */
+  signInBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: 16,
+    paddingVertical: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  signInBtnLoading: {
     opacity: 0.75,
   },
-  primaryButtonText: {
-    color: colors.onPrimary,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  footer: {
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  footerText: {
-    fontSize: 12,
-    color: colors.outline,
-    textAlign: 'center',
-    lineHeight: 18,
-    maxWidth: 320,
+  signInBtnText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.4,
   },
 });

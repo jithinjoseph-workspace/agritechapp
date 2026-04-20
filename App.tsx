@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { RootStackParamList } from './src/navigation/types';
 import { LoginScreen } from './src/screens/LoginScreen';
+import { ProfileScreen } from './src/screens/ProfileScreen';
 import { BottomTabs } from './src/navigation/BottomTabs';
 import { ReminderProvider } from './src/context/ReminderContext';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -35,16 +36,20 @@ function Navigation(): React.JSX.Element {
   }
 
   return (
-    <Stack.Navigator 
+    <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: colors.surface }
+        contentStyle: { backgroundColor: colors.surface },
+        animation: 'slide_from_right',
       }}
     >
       {!isAuthenticated ? (
         <Stack.Screen name="Login" component={LoginScreen} />
       ) : (
-        <Stack.Screen name="MainTabs" component={BottomTabs} />
+        <>
+          <Stack.Screen name="MainTabs" component={BottomTabs} />
+          <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
+        </>
       )}
     </Stack.Navigator>
   );

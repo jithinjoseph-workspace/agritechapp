@@ -3,272 +3,298 @@ import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { useReminder } from '../context/ReminderContext';
-import { useAuth } from '../context/AuthContext';
 import { AppIcon } from '../components/AppIcon';
 
 const INTERVALS = [
-  { label: 'Off', value: null },
-  { label: '15 minutes', value: 900 },
-  { label: '30 minutes', value: 1800 },
-  { label: '1 hour', value: 3600 },
-  { label: '4 hours', value: 14400 },
+  { label: 'Off',         value: null  },
+  { label: '15 minutes',  value: 900   },
+  { label: '30 minutes',  value: 1800  },
+  { label: '1 hour',      value: 3600  },
+  { label: '4 hours',     value: 14400 },
 ];
 
 export const SettingsScreen = () => {
-  const { logout } = useAuth();
   const { intervalSeconds, setIntervalSeconds, requestPermission, isNativeAvailable, testSystemNotification } =
     useReminder();
 
   const handleIntervalChange = async (value: number | null) => {
     if (value !== null) {
-      const hasPermission = await requestPermission();
-      if (!hasPermission) {
-        Alert.alert(
-          'Permission denied',
-          'System notifications require permission before they can appear outside the app.',
-        );
+      const ok = await requestPermission();
+      if (!ok) {
+        Alert.alert('Permission Required', 'Enable notification permission to receive reminders.');
         return;
       }
     }
-
     setIntervalSeconds(value);
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.headerBlock}>
-          <Text style={styles.screenTitle}>Settings</Text>
-          <Text style={styles.screenDescription}>
-            Manage reminder delivery and review notification availability for this device.
-          </Text>
-        </View>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionTitleRow}>
+        {/* Page label */}
+        <Text style={styles.pageLabel}>Settings</Text>
+
+        {/* Notifications section */}
+        <Text style={styles.sectionLabel}>Reminders</Text>
+        <View style={styles.card}>
+          {/* Card header */}
+          <View style={styles.cardHeader}>
+            <View style={styles.cardHeaderLeft}>
               <AppIcon
                 name="notifications"
-                size={18}
+                size={16}
                 color={colors.primary}
                 backgroundColor={colors.primaryContainer}
               />
-              <Text style={styles.sectionTitle}>Notifications</Text>
+              <Text style={styles.cardTitle}>Sensor Reminders</Text>
             </View>
-            <View style={[styles.statusBadge, isNativeAvailable ? styles.statusBadgeReady : styles.statusBadgePending]}>
-              <Text style={[styles.statusBadgeText, isNativeAvailable ? styles.statusBadgeTextReady : styles.statusBadgeTextPending]}>
-                {isNativeAvailable ? 'Ready' : 'Pending'}
+            <View style={[
+              styles.statusPill,
+              isNativeAvailable ? styles.statusPillReady : styles.statusPillPending,
+            ]}>
+              <Text style={[
+                styles.statusPillText,
+                isNativeAvailable ? styles.statusPillTextReady : styles.statusPillTextPending,
+              ]}>
+                {isNativeAvailable ? '● Active' : '○ Pending'}
               </Text>
             </View>
           </View>
 
-          <Text style={styles.sectionDescription}>
-            Select how often reminders are delivered. If native notifications are not configured yet, the app will
-            fall back to in-app alerts.
-          </Text>
+          <View style={styles.cardDivider} />
 
-          <View style={styles.optionsContainer}>
+          {/* Interval options */}
+          <View style={styles.intervalList}>
             {INTERVALS.map(interval => {
-              const isActive = intervalSeconds === interval.value;
-
+              const active = intervalSeconds === interval.value;
               return (
                 <TouchableOpacity
                   key={interval.label}
-                  style={[styles.optionCard, isActive && styles.optionCardActive]}
+                  style={[styles.intervalRow, active && styles.intervalRowActive]}
                   onPress={() => handleIntervalChange(interval.value)}
-                  activeOpacity={0.85}
+                  activeOpacity={0.78}
                 >
-                  <View style={styles.optionLeft}>
-                    <AppIcon
-                      name="timer"
-                      size={16}
-                      color={isActive ? colors.primary : colors.onSurfaceVariant}
-                      backgroundColor={isActive ? colors.primaryContainer : colors.surfaceContainer}
-                    />
-                    <Text style={[styles.optionLabel, isActive && styles.optionLabelActive]}>{interval.label}</Text>
+                  <View style={styles.intervalLeft}>
+                    <View style={[styles.radioRing, active && styles.radioRingActive]}>
+                      {active && <View style={styles.radioDot} />}
+                    </View>
+                    <Text style={[styles.intervalLabel, active && styles.intervalLabelActive]}>
+                      {interval.label}
+                    </Text>
                   </View>
-                  {isActive ? <AppIcon name="check" size={14} color={colors.primary} /> : null}
+                  {active && (
+                    <AppIcon name="check" size={12} color={colors.primary} backgroundColor={colors.primaryContainer} />
+                  )}
                 </TouchableOpacity>
               );
             })}
           </View>
 
+          <View style={styles.cardDivider} />
+
+          {/* Test button */}
           <TouchableOpacity
-            style={styles.testButton}
+            style={styles.testBtn}
             onPress={async () => {
               if (!isNativeAvailable) {
-                Alert.alert(
-                  'Notification service unavailable',
-                  "Native notifications are not active yet. Run 'npx react-native run-android' and restart Metro.",
-                );
+                Alert.alert('Unavailable', 'Restart the app after running it from Android Studio or CLI.');
                 return;
               }
-
               await testSystemNotification();
             }}
+            activeOpacity={0.8}
           >
-            <Text style={styles.testButtonText}>Send test notification</Text>
+            <AppIcon name="notifications" size={14} color={colors.primary} backgroundColor="transparent" />
+            <Text style={styles.testBtnText}>Send Test Notification</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.footerActions}>
-          <TouchableOpacity
-            style={styles.logoutButton}
-            onPress={async () => {
-              await logout();
-            }}
-          >
-            <AppIcon name="logout" size={16} color={colors.error} backgroundColor="#fce7e6" />
-            <Text style={styles.logoutButtonText}>Log out</Text>
-          </TouchableOpacity>
-          <Text style={styles.versionText}>AgriTech App v0.0.1</Text>
+        {/* About section */}
+        <Text style={styles.sectionLabel}>About</Text>
+        <View style={styles.card}>
+          <View style={styles.aboutRow}>
+            <View style={styles.aboutLeft}>
+              <View style={styles.aboutLogoBox}>
+                <AppIcon name="brand" size={16} color={colors.onPrimary} backgroundColor="transparent" />
+              </View>
+              <View>
+                <Text style={styles.aboutAppName}>AgriTech</Text>
+                <Text style={styles.aboutVersion}>Version 0.0.1</Text>
+              </View>
+            </View>
+          </View>
         </View>
+
       </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.surface,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    paddingBottom: 120,
-  },
-  headerBlock: {
-    marginBottom: 24,
-  },
-  screenTitle: {
-    fontSize: 28,
+  container: { flex: 1, backgroundColor: '#f0f4f2' },
+  scroll: { paddingHorizontal: 20, paddingTop: 22, paddingBottom: 120 },
+
+  pageLabel: {
+    fontSize: 26,
     fontWeight: '800',
     color: colors.onSurface,
-    marginBottom: 8,
+    marginBottom: 24,
+    letterSpacing: 0.2,
   },
-  screenDescription: {
-    fontSize: 14,
+
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '700',
     color: colors.onSurfaceVariant,
-    lineHeight: 22,
+    textTransform: 'uppercase',
+    letterSpacing: 1.1,
+    marginBottom: 10,
+    marginLeft: 2,
   },
-  section: {
-    backgroundColor: colors.surfaceContainerLowest,
+
+  card: {
+    backgroundColor: '#ffffff',
     borderRadius: 22,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: colors.outlineVariant,
+    overflow: 'hidden',
+    marginBottom: 28,
+    shadowColor: '#1f3b2f',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  sectionHeader: {
+
+  /* Card header */
+  cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
   },
-  sectionTitleRow: {
+  cardHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
   },
-  sectionTitle: {
-    marginLeft: 10,
-    fontSize: 18,
+  cardTitle: {
+    fontSize: 15,
     fontWeight: '700',
     color: colors.onSurface,
   },
-  sectionDescription: {
-    fontSize: 14,
-    lineHeight: 21,
-    color: colors.onSurfaceVariant,
-    marginBottom: 18,
+  cardDivider: {
+    height: 1,
+    backgroundColor: '#f0f4f2',
+    marginHorizontal: 0,
   },
-  statusBadge: {
+
+  /* Status pill */
+  statusPill: {
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: 999,
   },
-  statusBadgeReady: {
-    backgroundColor: '#e7f6ec',
+  statusPillReady:   { backgroundColor: '#e6f4ec' },
+  statusPillPending: { backgroundColor: '#fef3f2' },
+  statusPillText: { fontSize: 11, fontWeight: '700' },
+  statusPillTextReady:   { color: '#1f7a3e' },
+  statusPillTextPending: { color: '#b42318' },
+
+  /* Interval list */
+  intervalList: {
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    gap: 2,
   },
-  statusBadgePending: {
-    backgroundColor: '#fef3f2',
-  },
-  statusBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  statusBadgeTextReady: {
-    color: '#1f7a3e',
-  },
-  statusBadgeTextPending: {
-    color: '#b42318',
-  },
-  optionsContainer: {
-    gap: 12,
-  },
-  optionCard: {
+  intervalRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.surfaceContainerLow,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.outlineVariant,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingVertical: 13,
+    paddingHorizontal: 12,
+    borderRadius: 14,
   },
-  optionCardActive: {
-    borderColor: colors.primary,
-    backgroundColor: '#f7faf8',
+  intervalRowActive: {
+    backgroundColor: '#f0f4f2',
   },
-  optionLeft: {
+  intervalLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
   },
-  optionLabel: {
-    marginLeft: 10,
+  radioRing: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: colors.outlineVariant,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioRingActive: {
+    borderColor: colors.primary,
+  },
+  radioDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: colors.primary,
+  },
+  intervalLabel: {
     fontSize: 15,
     fontWeight: '600',
     color: colors.onSurfaceVariant,
   },
-  optionLabelActive: {
+  intervalLabelActive: {
     color: colors.primary,
   },
-  testButton: {
-    marginTop: 18,
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    borderRadius: 16,
-    alignItems: 'center',
-  },
-  testButtonText: {
-    color: colors.onPrimary,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  footerActions: {
-    marginTop: 24,
-    alignItems: 'center',
-  },
-  logoutButton: {
-    width: '100%',
+
+  /* Test button */
+  testBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
-    backgroundColor: '#fff5f5',
-    borderWidth: 1,
-    borderColor: '#f6d0ce',
+    gap: 8,
     paddingVertical: 15,
-    borderRadius: 16,
+    paddingHorizontal: 18,
   },
-  logoutButtonText: {
-    color: colors.error,
-    fontSize: 15,
+  testBtnText: {
+    fontSize: 14,
     fontWeight: '700',
+    color: colors.primary,
   },
-  versionText: {
-    marginTop: 14,
-    color: colors.outline,
+
+  /* About section */
+  aboutRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+  },
+  aboutLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  aboutLogoBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aboutAppName: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.onSurface,
+    marginBottom: 2,
+  },
+  aboutVersion: {
     fontSize: 12,
+    color: colors.onSurfaceVariant,
+    fontWeight: '500',
   },
 });
