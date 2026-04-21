@@ -1,90 +1,143 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Platform,
-  TouchableOpacity
-} from 'react-native';
+import React, { useCallback } from 'react';
+import { ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { colors } from '../theme/colors';
+import { useFarm } from '../context/FarmContext';
+import { AppIcon } from '../components/AppIcon';
 
-// Replaced placeholder with real MaterialIcons
+const SENSOR_META: Record<
+  string,
+  { icon: 'moisture' | 'temperature' | 'humidity' | 'ph' | 'sunlight' | 'fertility'; label: string }
+> = {
+  soil_moisture:   { icon: 'moisture',    label: 'Soil Moisture'   },
+  soil_temperature:{ icon: 'temperature', label: 'Soil Temp.'      },
+  humidity:        { icon: 'humidity',    label: 'Humidity'        },
+  ph_level:        { icon: 'ph',          label: 'pH Level'        },
+  sunlight:        { icon: 'sunlight',    label: 'Sunlight'        },
+  fertility:       { icon: 'fertility',   label: 'Fertility'       },
+};
 
-const DisplayStatCard = ({ iconName, iconBg, iconColor, title, value, changeText, changeIcon, isError }: any) => (
-  <View style={styles.statCard}>
-    <View style={styles.statHeader}>
-      <View style={{ backgroundColor: iconBg, padding: 8, borderRadius: 8 }}>
-        <Icon name={iconName.replace(/_/g, '-')} color={iconColor} size={18} />
+const isNormal = (status: string) =>
+  status?.toLowerCase() === 'normal';
+
+const DisplayStatCard = ({ sensorType, value, status }: any) => {
+  const meta = SENSOR_META[sensorType];
+  const good = isNormal(status);
+
+  return (
+    <View style={styles.statCard}>
+      {/* Top row: icon + status badge */}
+      <View style={styles.statTop}>
+        <AppIcon
+          name={meta.icon}
+          size={16}
+          color={colors.primary}
+          backgroundColor={colors.primaryContainer}
+        />
+        <View style={[styles.statusBadge, good ? styles.statusGood : styles.statusWarn]}>
+          <Text style={[styles.statusText, good ? styles.statusTextGood : styles.statusTextWarn]}>
+            {status}
+          </Text>
+        </View>
       </View>
-      <Text style={styles.statName}>{title}</Text>
+      {/* Value */}
+      <Text style={styles.statValue}>{value}</Text>
+      {/* Label */}
+      <Text style={styles.statLabel}>{meta.label}</Text>
     </View>
-    <Text style={styles.statValue}>{value}</Text>
-    <View style={styles.changeTextRow}>
-      <Icon name={changeIcon.replace(/_/g, '-')} color={isError ? colors.error : colors.secondary} size={12} />
-      <Text style={isError ? styles.statChangeError : styles.statChangeNeutral}>{changeText}</Text>
-    </View>
-  </View>
-);
+  );
+};
 
-// Removed BlockCard component
+export const DashboardScreen = () => {
+  const { activeBlock, refreshActiveBlockSensors } = useFarm();
+  const navigation = useNavigation<any>();
 
-export const DashboardScreen = ({ navigation }: any) => {
+  useFocusEffect(
+    useCallback(() => {
+      if (activeBlock) refreshActiveBlockSensors(activeBlock.block_id);
+    }, [activeBlock, refreshActiveBlockSensors]),
+  );
+
+  if (!activeBlock) return null;
+
+  const getSensor = (type: string) =>
+    activeBlock.sensors.sensors.find(s => s.sensor_type === type);
+
+  const fmtValue = (type: string) => {
+    const s = getSensor(type);
+    return s ? `${s.value} ${s.unit}`.trim() : 'N/A';
+  };
+
+  const fmtStatus = (type: string) => getSensor(type)?.status || 'Normal';
+
+  const statOrder = [
+    'soil_moisture', 'soil_temperature',
+    'humidity',      'ph_level',
+    'sunlight',      'fertility',
+  ];
+
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* Quick Stats Bento Grid - All Sensors Display */}
-        <View style={styles.quickStatsGrid}>
-          <DisplayStatCard
-            iconName="water_drop" iconBg="rgba(1, 45, 29, 0.1)" iconColor={colors.primary}
-            title="MOISTURE" value="42.8%" changeText="-2.4% vs Yesterday" changeIcon="trending_down" isError={true}
-          />
-          <DisplayStatCard
-            iconName="device_thermostat" iconBg="rgba(0, 108, 72, 0.1)" iconColor={colors.secondary}
-            title="TEMP" value="24°C" changeText="+1.2% vs Avg" changeIcon="trending_up" isError={false}
-          />
-          <DisplayStatCard
-            iconName="humidity_low" iconBg="rgba(0, 69, 45, 0.1)" iconColor={colors.tertiary}
-            title="HUMIDITY" value="68%" changeText="Stable" changeIcon="remove" isError={false}
-          />
-          <DisplayStatCard
-            iconName="science" iconBg="rgba(176, 241, 204, 0.4)" iconColor={colors.tertiary}
-            title="pH LEVEL" value="6.4" changeText="Target: 6.2-6.8" changeIcon="check_circle" isError={false}
-          />
-          <DisplayStatCard
-            iconName="wb_sunny" iconBg="rgba(255, 218, 106, 0.2)" iconColor="#D97706"
-            title="SUNLIGHT" value="850 W/m²" changeText="Optimal" changeIcon="trending_up" isError={false}
-          />
-          <DisplayStatCard
-            iconName="compost" iconBg="rgba(1, 45, 29, 0.1)" iconColor={colors.primary}
-            title="FERTILITY" value="78 EC" changeText="Stable" changeIcon="remove" isError={false}
-          />
+        {/* Page label */}
+        <Text style={styles.pageLabel}>Overview</Text>
 
-          {/* New Farm Mapping Card - Hidden for now */}
-          {/* <TouchableOpacity
-            style={[styles.statCard, { backgroundColor: colors.primary, width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
-            onPress={() => navigation.navigate('Mapping')}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-              <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', padding: 12, borderRadius: 12 }}>
-                <Icon name="map" color="#fff" size={24} />
-              </View>
-              <View>
-                <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>Farm Boundaries</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>Map your blocks & areas</Text>
-              </View>
+        {/* Selected block hero card */}
+        <View style={styles.heroCard}>
+          {/* Decorative orb */}
+          <View style={styles.heroOrb} />
+          <Text style={styles.heroEyebrow}>Selected Block</Text>
+          <Text style={styles.heroTitle}>{activeBlock.lanslu}</Text>
+          <View style={styles.heroMeta}>
+            <View style={styles.heroPill}>
+              <Text style={styles.heroPillText}>{activeBlock.crop}</Text>
             </View>
-            <Icon name="chevron-right" color="#fff" size={24} />
-          </TouchableOpacity> */}
+            {!!activeBlock.area_ha && (
+              <View style={[styles.heroPill, styles.heroPillOutline]}>
+                <Text style={[styles.heroPillText, styles.heroPillTextOutline]}>
+                  {activeBlock.area_ha} ha
+                </Text>
+              </View>
+            )}
+          </View>
+          {!!activeBlock.description && (
+            <Text style={styles.heroDesc}>{activeBlock.description}</Text>
+          )}
+        </View>
 
-          {/* Adding bottom padding so nothing hides behind bottom bar */}
-          <View style={{ height: 48, width: '100%' }} />
+        {/* Navigation Actions */}
+        <TouchableOpacity
+          style={styles.mappingCard}
+          onPress={() => navigation.navigate('Mapping')}
+          activeOpacity={0.9}
+        >
+          <View style={styles.mappingCardLeft}>
+            <View style={styles.mappingIconBox}>
+              <AppIcon name="location" size={20} color={colors.primary} backgroundColor="transparent" />
+            </View>
+            <View>
+              <Text style={styles.mappingTitle}>Farm Boundaries</Text>
+              <Text style={styles.mappingSub}>View and update block area maps</Text>
+            </View>
+          </View>
+          <AppIcon name="show" size={16} color={colors.outline} backgroundColor="transparent" />
+        </TouchableOpacity>
+
+        {/* Section label */}
+        <Text style={styles.sectionLabel}>Live Readings</Text>
+
+        {/* Sensor grid */}
+        <View style={styles.grid}>
+          {statOrder.map(type => (
+            <DisplayStatCard
+              key={type}
+              sensorType={type}
+              value={fmtValue(type)}
+              status={fmtStatus(type)}
+            />
+          ))}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -92,17 +145,170 @@ export const DashboardScreen = ({ navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.surface },
-  scrollContent: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 120, gap: 32 },
+  container: { flex: 1, backgroundColor: '#f0f4f2' },
+  scroll: { paddingHorizontal: 20, paddingTop: 22, paddingBottom: 120 },
 
-  quickStatsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 16 },
-  statCard: { width: '47%', backgroundColor: colors.surfaceContainerLowest, borderRadius: 24, padding: 24, elevation: 4 },
-  statHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
-  statIconContainerPrimary: { backgroundColor: 'rgba(1, 45, 29, 0.1)', padding: 8, borderRadius: 8 },
-  statIconContainerSecondary: { backgroundColor: 'rgba(0, 108, 72, 0.1)', padding: 8, borderRadius: 8 },
-  statName: { fontSize: 11, fontWeight: 'bold', color: colors.onSurfaceVariant, flexShrink: 1, flexWrap: 'wrap' },
-  statValue: { fontSize: 32, fontWeight: '900', color: colors.primary, marginBottom: 8 },
-  changeTextRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  statChangeError: { fontSize: 9, fontWeight: 'bold', color: colors.error, flexShrink: 1 },
-  statChangeNeutral: { fontSize: 9, fontWeight: 'bold', color: colors.secondary, flexShrink: 1 },
+  pageLabel: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: colors.onSurface,
+    marginBottom: 18,
+    letterSpacing: 0.2,
+  },
+
+  /* Hero block card */
+  heroCard: {
+    backgroundColor: colors.primary,
+    borderRadius: 24,
+    padding: 22,
+    marginBottom: 24,
+    overflow: 'hidden',
+  },
+  heroOrb: {
+    position: 'absolute',
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    top: -50,
+    right: -40,
+  },
+  heroEyebrow: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: 'rgba(255,255,255,0.6)',
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    marginBottom: 8,
+  },
+  heroTitle: {
+    fontSize: 30,
+    fontWeight: '800',
+    color: '#ffffff',
+    letterSpacing: 0.3,
+    marginBottom: 14,
+  },
+  heroMeta: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  heroPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  heroPillOutline: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  heroPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  heroPillTextOutline: {
+    color: 'rgba(255,255,255,0.85)',
+  },
+  heroDesc: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.65)',
+    lineHeight: 19,
+  },
+
+  /* Mapping Card */
+  mappingCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: '#1f3b2f',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  mappingCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  mappingIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: colors.primaryContainer,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mappingTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: colors.onSurface,
+    marginBottom: 2,
+  },
+  mappingSub: {
+    fontSize: 12,
+    color: colors.onSurfaceVariant,
+    fontWeight: '500',
+  },
+
+  /* Section label */
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.onSurfaceVariant,
+    textTransform: 'uppercase',
+    letterSpacing: 1.1,
+    marginBottom: 12,
+    marginLeft: 2,
+  },
+
+  /* Stat grid */
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  statCard: {
+    width: '47.5%',
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 16,
+    shadowColor: '#1f3b2f',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  statTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  statusGood: { backgroundColor: '#e6f4ec' },
+  statusWarn: { backgroundColor: '#fef3f2' },
+  statusText: { fontSize: 10, fontWeight: '700' },
+  statusTextGood: { color: '#1f7a3e' },
+  statusTextWarn: { color: '#b42318' },
+  statValue: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: colors.onSurface,
+    marginBottom: 5,
+    letterSpacing: 0.2,
+  },
+  statLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.onSurfaceVariant,
+  },
 });

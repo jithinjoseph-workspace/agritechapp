@@ -1,35 +1,36 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TextInput, 
-  TouchableOpacity, 
-  ScrollView,
+import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
-  Alert
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { colors } from '../theme/colors';
 import { authService } from '../api/authService';
 import { useAuth } from '../context/AuthContext';
+import { useFarm } from '../context/FarmContext';
+import { AppIcon } from '../components/AppIcon';
 
-// Replaced placeholder with real MaterialIcons
-
-export const LoginScreen = ({ navigation }: any) => {
+export const LoginScreen = (_props: any) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
 
   const { login } = useAuth();
+  const { clearFarmData, refreshFarmData } = useFarm();
 
   const handleLogin = async () => {
-    console.log('👆 Login button pressed');
     if (!email || !password) {
       setErrorMessage('Please enter both email and password.');
       return;
@@ -39,140 +40,149 @@ export const LoginScreen = ({ navigation }: any) => {
     setErrorMessage(null);
 
     try {
-      const data = await authService.mobileLogin(email, password);
-      console.log('Login successful:', data);
-      
-      // Update global auth state
+      await authService.clearSession();
+      clearFarmData();
+
+      const data = await authService.mobileLogin(email.trim(), password);
       await login(data);
+
+      const nextUserId = data?.user?.id || data?.user?.user_id || data?.id || data?.user_id;
+      if (!nextUserId) throw new Error('Login response did not include a valid user ID.');
+
+      await refreshFarmData(nextUserId);
     } catch (error: any) {
-      console.error('Login error:', error);
-      const msg = error.response?.data?.message || error.message || 'Unable to connect to server. Check your internet or API IP.';
+      const msg =
+        error.response?.data?.detail ||
+        error.response?.data?.message ||
+        (error.message === 'Network Error'
+          ? 'Unable to reach the server. Please check your connection.'
+          : error.message) ||
+        'Login failed. Please try again.';
       setErrorMessage(msg);
     } finally {
       setIsLoading(false);
     }
   };
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* Hero Decorative Layer (Asymmetric Design - approximated with absolute positioning) */}
-      <View style={styles.decorativeCircleTopRight} />
-      <View style={styles.decorativeCircleBottomLeft} />
-
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
+        style={styles.flex}
       >
-        <ScrollView 
-          contentContainerStyle={styles.scrollContent} 
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Brand Identity */}
-          <View style={styles.header}>
-            <View style={styles.logoContainer}>
-              <Icon name="eco" color={colors.secondaryFixed} size={32} />
+
+          {/* ── Brand / Hero ─────────────────────────── */}
+          <View style={styles.hero}>
+            {/* Logo mark */}
+            <View style={styles.logoRing}>
+              <View style={styles.logoBox}>
+                <AppIcon
+                  name="brand"
+                  size={28}
+                  color={colors.onPrimary}
+                  backgroundColor="transparent"
+                />
+              </View>
             </View>
-            <Text style={styles.subtitle}>AGRONOMIST</Text>
-            <Text style={styles.title}>Cultivating Success</Text>
-            <Text style={styles.description}>Enter your credentials to access the farm intelligence suite.</Text>
+
+            <Text style={styles.appName}>AgriTech</Text>
+            <Text style={styles.tagline}>Farm Intelligence Platform</Text>
           </View>
 
-          {/* Form Section */}
-          <View style={styles.formSection}>
-            
-            {/* Error Message Display */}
-            {errorMessage && (
-              <View style={styles.errorContainer}>
+          {/* ── Form card ────────────────────────────── */}
+          <View style={styles.card}>
+            <Text style={styles.signInTitle}>Welcome back</Text>
+            <Text style={styles.signInSub}>Sign in to your account</Text>
+
+            {/* Error banner */}
+            {!!errorMessage && (
+              <View style={styles.errorBanner}>
                 <Text style={styles.errorText}>{errorMessage}</Text>
               </View>
             )}
 
-            {/* Email Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>EMAIL</Text>
-              <View style={styles.inputContainer}>
-                <View style={styles.inputIconLeft}>
-                  <Icon name="mail" color={colors.outlineVariant} size={18} />
-                </View>
-                <TextInput 
-                  style={styles.input} 
+            {/* Email field */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Email</Text>
+              <View style={[styles.fieldBox, emailFocused && styles.fieldBoxFocused]}>
+                <AppIcon
+                  name="mail"
+                  size={15}
+                  color={emailFocused ? colors.primary : colors.onSurfaceVariant}
+                  backgroundColor="transparent"
+                />
+                <TextInput
+                  style={styles.fieldInput}
                   placeholder="name@example.com"
-                  placeholderTextColor={colors.outlineVariant}
+                  placeholderTextColor={colors.outline}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   value={email}
                   onChangeText={setEmail}
+                  onFocus={() => setEmailFocused(true)}
+                  onBlur={() => setEmailFocused(false)}
                   editable={!isLoading}
                 />
               </View>
             </View>
 
-            {/* Password Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>PASSWORD</Text>
-              <View style={styles.inputContainer}>
-                <View style={styles.inputIconLeft}>
-                  <Icon name="lock" color={colors.outlineVariant} size={18} />
-                </View>
-                <TextInput 
-                  style={styles.input} 
-                  placeholder="••••••••••••"
-                  placeholderTextColor={colors.outlineVariant}
+            {/* Password field */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Password</Text>
+              <View style={[styles.fieldBox, passwordFocused && styles.fieldBoxFocused]}>
+                <AppIcon
+                  name="lock"
+                  size={15}
+                  color={passwordFocused ? colors.primary : colors.onSurfaceVariant}
+                  backgroundColor="transparent"
+                />
+                <TextInput
+                  style={styles.fieldInput}
+                  placeholder="Enter your password"
+                  placeholderTextColor={colors.outline}
                   secureTextEntry={!showPassword}
                   value={password}
                   onChangeText={setPassword}
+                  onFocus={() => setPasswordFocused(true)}
+                  onBlur={() => setPasswordFocused(false)}
                   editable={!isLoading}
                 />
-                <TouchableOpacity 
-                  style={styles.inputIconRight}
+                <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
                   disabled={isLoading}
+                  style={styles.eyeBtn}
+                  activeOpacity={0.7}
                 >
-                  <Icon name={showPassword ? 'visibility-off' : 'visibility'} color={colors.outlineVariant} size={18} />
+                  <AppIcon
+                    name={showPassword ? 'hide' : 'show'}
+                    size={14}
+                    color={colors.onSurfaceVariant}
+                    backgroundColor="transparent"
+                  />
                 </TouchableOpacity>
               </View>
             </View>
 
-
-            {/* Forgot Password */}
-            <TouchableOpacity style={styles.forgotPasswordContainer} disabled={isLoading}>
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-            </TouchableOpacity>
-
-            {/* Primary Action */}
-            <TouchableOpacity 
-              style={[styles.primaryButton, isLoading && { opacity: 0.7 }]} 
+            {/* Sign In button */}
+            <TouchableOpacity
+              style={[styles.signInBtn, isLoading && styles.signInBtnLoading]}
               onPress={handleLogin}
               disabled={isLoading}
+              activeOpacity={0.88}
             >
               {isLoading ? (
-                <ActivityIndicator color={colors.onPrimary} size="small" />
+                <ActivityIndicator color="#ffffff" size="small" />
               ) : (
-                <>
-                  <Text style={styles.primaryButtonText}>Sign In to Dashboard</Text>
-                  <Icon name="arrow-forward" color={colors.onPrimary} size={18} />
-                </>
+                <Text style={styles.signInBtnText}>Sign In</Text>
               )}
             </TouchableOpacity>
-
-            {/* Divider */}
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>AUTHORIZED ENTRY ONLY</Text>
-              <View style={styles.dividerLine} />
-            </View>
           </View>
 
-          {/* Footer Visual Hint */}
-          <View style={styles.footer}>
-            <View style={styles.nodeActiveContainer}>
-              <View style={styles.pulsingDot} />
-              <Text style={styles.nodeActiveText}>CENTRAL NODE ACTIVE</Text>
-            </View>
-            <Text style={styles.footerDisclaimer}>
-              SECURE ENTERPRISE ACCESS FOR PROFESSIONAL AGRICULTURAL MONITORING AND SOIL ANALYSIS.
-            </Text>
-          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -180,262 +190,159 @@ export const LoginScreen = ({ navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
+
   container: {
     flex: 1,
-    backgroundColor: colors.surface,
-    position: 'relative'
+    backgroundColor: '#f0f4f2',
   },
-  decorativeCircleTopRight: {
-    position: 'absolute',
-    top: '-10%',
-    right: '-10%',
-    width: '60%',
-    height: '40%',
-    borderRadius: 200,
-    backgroundColor: colors.secondaryFixed,
-    opacity: 0.1,
-  },
-  decorativeCircleBottomLeft: {
-    position: 'absolute',
-    bottom: '-20%',
-    left: '-10%',
-    width: '50%',
-    height: '50%',
-    borderRadius: 200,
-    backgroundColor: colors.primaryContainer,
-    opacity: 0.05,
-  },
+
   scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
     paddingHorizontal: 24,
-    paddingTop: 48,
-    paddingBottom: 40,
-    alignItems: 'center'
+    paddingVertical: 40,
   },
-  header: {
+
+  /* ── Hero ── */
+  hero: {
     alignItems: 'center',
-    marginBottom: 48,
-    width: '100%',
+    marginBottom: 36,
   },
-  logoContainer: {
-    width: 64,
-    height: 64,
-    backgroundColor: colors.primaryContainer,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-    elevation: 8,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+  logoRing: {
+    padding: 6,
+    borderRadius: 28,
+    borderWidth: 2,
+    borderColor: colors.primaryContainer,
+    marginBottom: 18,
   },
-  subtitle: {
-    fontSize: 10,
-    fontWeight: '900',
-    letterSpacing: 2,
-    color: colors.primary,
-    textTransform: 'uppercase',
-    marginBottom: 8,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: colors.primary,
-    letterSpacing: -0.5,
-    textAlign: 'center'
-  },
-  description: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.onSurfaceVariant,
-    marginTop: 12,
-    textAlign: 'center',
-  },
-  formSection: {
-    width: '100%',
-    maxWidth: 400,
-  },
-  inputGroup: {
-    marginBottom: 20,
-    width: '100%',
-  },
-  labelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-    paddingHorizontal: 4,
-  },
-  label: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    color: colors.onSurfaceVariant,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    marginBottom: 8,
-    marginLeft: 4,
-  },
-  badge: {
-    backgroundColor: colors.tertiaryFixed,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 999,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.onTertiaryFixedVariant,
-  },
-  inputContainer: {
-    position: 'relative',
-    justifyContent: 'center',
-  },
-  inputIconLeft: {
-    position: 'absolute',
-    left: 16,
-    zIndex: 1,
-  },
-  inputIconRight: {
-    position: 'absolute',
-    right: 16,
-    zIndex: 1,
-  },
-  input: {
-    width: '100%',
-    backgroundColor: colors.surfaceContainerLowest,
-    borderWidth: 1,
-    borderColor: 'rgba(193, 200, 194, 0.3)', // outlineVariant with opacity
-    borderRadius: 12,
-    paddingLeft: 48,
-    paddingRight: 48,
-    paddingVertical: 16,
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.onSurface,
-  },
-  monoInput: {
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-    letterSpacing: 1,
-  },
-  forgotPasswordContainer: {
-    alignItems: 'flex-end',
-    paddingHorizontal: 4,
-    marginBottom: 16,
-  },
-  forgotPasswordText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.secondary,
-    letterSpacing: -0.2,
-  },
-  primaryButton: {
+  logoBox: {
+    width: 68,
+    height: 68,
+    borderRadius: 20,
     backgroundColor: colors.primary,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginTop: 16,
-    elevation: 8,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-  },
-  primaryButtonText: {
-    color: colors.onPrimary,
-    fontSize: 14,
-    fontWeight: 'bold',
-    letterSpacing: -0.2,
-  },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    marginTop: 16,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: 'rgba(193, 200, 194, 0.3)',
-  },
-  dividerText: {
-    paddingHorizontal: 16,
-    fontSize: 10,
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-    color: colors.outlineVariant,
-  },
-  secondaryButton: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
-    paddingVertical: 14,
-    backgroundColor: colors.surfaceContainerLowest,
-    borderWidth: 1,
-    borderColor: 'rgba(193, 200, 194, 0.2)',
-    borderRadius: 12,
   },
-  googleIconWrapper: {
-    fontSize: 18,
-  },
-  secondaryButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
+  appName: {
+    fontSize: 30,
+    fontWeight: '800',
     color: colors.onSurface,
+    letterSpacing: 0.5,
+    marginBottom: 5,
   },
-  footer: {
-    marginTop: 64,
-    alignItems: 'center',
-  },
-  nodeActiveContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: colors.surfaceContainerLow,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 999,
-  },
-  pulsingDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.secondary,
-  },
-  nodeActiveText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    color: colors.onSurfaceVariant,
-  },
-  footerDisclaimer: {
-    marginTop: 32,
-    color: colors.outlineVariant,
-    fontSize: 10,
+  tagline: {
+    fontSize: 13,
     fontWeight: '500',
-    textAlign: 'center',
-    lineHeight: 16,
-    letterSpacing: 0,
-    maxWidth: 200,
+    color: colors.onSurfaceVariant,
+    letterSpacing: 0.3,
   },
-  errorContainer: {
-    backgroundColor: '#fee2e2',
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 20,
+
+  /* ── Card ── */
+  card: {
+    backgroundColor: '#ffffff',
+    borderRadius: 28,
+    padding: 28,
     borderWidth: 1,
-    borderColor: '#fecaca',
+    borderColor: colors.outlineVariant,
+    shadowColor: '#1f3b2f',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 6,
+  },
+  signInTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.onSurface,
+    textAlign: 'center',
+    marginBottom: 4,
+    letterSpacing: 0.2,
+  },
+  signInSub: {
+    fontSize: 13,
+    color: colors.onSurfaceVariant,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+
+  /* Error */
+  errorBanner: {
+    backgroundColor: colors.errorContainer,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: '#f3c3c0',
   },
   errorText: {
-    color: '#991b1b',
+    color: colors.onErrorContainer,
     fontSize: 13,
     fontWeight: '600',
     textAlign: 'center',
+    lineHeight: 18,
+  },
+
+  /* Fields */
+  fieldGroup: {
+    marginBottom: 16,
+  },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.onSurfaceVariant,
+    textTransform: 'uppercase',
+    letterSpacing: 0.7,
+    marginBottom: 8,
+    marginLeft: 2,
+  },
+  fieldBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f4f2',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: colors.outlineVariant,
+    paddingHorizontal: 14,
+    paddingVertical: Platform.OS === 'ios' ? 14 : 0,
+    gap: 10,
+  },
+  fieldBoxFocused: {
+    borderColor: colors.primary,
+    backgroundColor: '#ffffff',
+  },
+  fieldInput: {
+    flex: 1,
+    fontSize: 15,
+    color: colors.onSurface,
+    paddingVertical: Platform.OS === 'android' ? 13 : 0,
+  },
+  eyeBtn: {
+    padding: 4,
+  },
+
+  /* Button */
+  signInBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: 16,
+    paddingVertical: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  signInBtnLoading: {
+    opacity: 0.75,
+  },
+  signInBtnText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.4,
   },
 });

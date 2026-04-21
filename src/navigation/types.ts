@@ -6,6 +6,7 @@ export type RootStackParamList = {
   Login: undefined;
   MainTabs: undefined;
   Mapping: undefined;
+  ProfileScreen: undefined;
 };
 
 export type BottomTabParamList = {
@@ -26,5 +27,10 @@ export type DashboardScreenProps = CompositeScreenProps<
 
 export type SensorScreenProps = CompositeScreenProps<
   BottomTabScreenProps<BottomTabParamList, 'SensorTab'>,
+  NativeStackScreenProps<RootStackParamList>
+>;
+
+export type HistoryScreenProps = CompositeScreenProps<
+  BottomTabScreenProps<BottomTabParamList, 'InsightsTab'>,
   NativeStackScreenProps<RootStackParamList>
 >;
