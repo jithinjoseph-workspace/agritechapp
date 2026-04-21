@@ -29,6 +29,27 @@ function getDevServerHost() {
   }
 }
 
+function isAndroidEmulator() {
+  if (Platform.OS !== 'android') return false;
+  
+  const constants = Platform.constants as any;
+  if (!constants) return false;
+
+  const fingerprint = (constants.Fingerprint || '').toLowerCase();
+  const model = (constants.Model || '').toLowerCase();
+  const brand = (constants.Brand || '').toLowerCase();
+
+  return (
+    fingerprint.includes('vbox') ||
+    fingerprint.includes('generic') ||
+    fingerprint.includes('emulator') ||
+    model.includes('sdk') ||
+    model.includes('emulator') ||
+    (brand.includes('google') && fingerprint.includes('sdk')) ||
+    brand === 'generic'
+  );
+}
+
 function resolveApiHost() {
   if (MANUAL_API_HOST.trim()) {
     return MANUAL_API_HOST.trim();
@@ -45,10 +66,15 @@ function resolveApiHost() {
   }
 
   if (Platform.OS === 'android') {
-    // For USB debugging or adb reverse we should talk to localhost.
-    // If you're using the Android emulator without port forwarding,
-    // set MANUAL_API_HOST to 10.0.2.2.
-    return '10.0.2.2';
+    // Automatically detect emulator vs physical device
+    if (isAndroidEmulator()) {
+      return '10.0.2.2'; // Standard loopback for Android emulator
+    }
+    
+    // For USB debugging on physical devices:
+    // If you haven't already, please run: adb reverse tcp:8000 tcp:8000 
+    // to map localhost on device to localhost on this machine.
+    return '127.0.0.1';
   }
 
   return '127.0.0.1';
