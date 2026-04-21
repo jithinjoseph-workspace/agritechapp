@@ -30,7 +30,19 @@ type HistoryFilter = 'today' | '7days' | '30days' | 'date';
 
 type HistorySection = {
   title: string;
-  data: SensorSnapshotHistoryEntry[];
+  data: VisibleHistoryEntry[];
+};
+
+type PreparedHistoryEntry = SensorSnapshotHistoryEntry & {
+  dateKey: string;
+  formattedDate: string;
+  observedAtMs: number;
+  sectionTitle: string;
+  metrics: HistoryMetricMap;
+};
+
+type VisibleHistoryEntry = PreparedHistoryEntry & {
+  displayNumber: number;
 };
 
 function formatDate(value: string) {
@@ -133,6 +145,50 @@ const FILTERS: { key: HistoryFilter; label: string; days: number }[] = [
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+type HistoryCardProps = {
+  item: VisibleHistoryEntry;
+  blockName?: string;
+};
+
+const HistoryCard = React.memo(({ item, blockName }: HistoryCardProps) => {
+  return (
+    <View style={styles.histCard}>
+      <View style={styles.histCardHeader}>
+        <View>
+          <Text style={styles.histDate}>{item.formattedDate}</Text>
+          <Text style={styles.histBlock}>{blockName || 'Block'}</Text>
+        </View>
+        <View style={styles.entryBadge}>
+          <Text style={styles.entryBadgeText}>#{item.displayNumber}</Text>
+        </View>
+      </View>
+
+      <View style={styles.histDivider} />
+
+      <View style={styles.chipGrid}>
+        {METRIC_DEFS.map(def => {
+          const val = item.metrics[def.key];
+          if (!val) return null;
+          return (
+            <View key={def.key} style={styles.metricChip}>
+              <AppIcon
+                name={def.icon}
+                size={11}
+                color={colors.primary}
+                backgroundColor="transparent"
+              />
+              <View>
+                <Text style={styles.chipLabel}>{def.label}</Text>
+                <Text style={styles.chipValue}>{val}</Text>
+              </View>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+});
+
 export const HistoryScreen: React.FC<HistoryScreenProps> = () => {
   const { activeBlock } = useFarm();
   const [entries, setEntries]       = useState<SensorSnapshotHistoryEntry[]>([]);
@@ -166,9 +222,25 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = () => {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const entryDateKeys = useMemo(() => {
-    return new Set(entries.map(entry => toDateKey(new Date(entry.observed_at))));
+  const preparedEntries = useMemo<PreparedHistoryEntry[]>(() => {
+    return entries
+      .map(entry => {
+        const observedAt = new Date(entry.observed_at);
+        return {
+          ...entry,
+          dateKey: toDateKey(observedAt),
+          formattedDate: formatDate(entry.observed_at),
+          observedAtMs: observedAt.getTime(),
+          sectionTitle: getSectionTitle(entry.observed_at),
+          metrics: buildMetrics(entry),
+        };
+      })
+      .sort((a, b) => b.observedAtMs - a.observedAtMs);
   }, [entries]);
+
+  const entryDateKeys = useMemo(() => {
+    return new Set(preparedEntries.map(entry => entry.dateKey));
+  }, [preparedEntries]);
 
   const calendarDays = useMemo(() => {
     const year = calendarMonth.getFullYear();
@@ -192,80 +264,41 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = () => {
     return formatSelectedDate(fromDateKey(selectedDateKey));
   }, [selectedDateKey]);
 
-  const visibleEntries = useMemo(() => {
+  const visibleEntries = useMemo<VisibleHistoryEntry[]>(() => {
+    let filteredEntries: PreparedHistoryEntry[];
+
     if (activeFilter === 'date') {
-      return [...entries]
-        .filter(entry => toDateKey(new Date(entry.observed_at)) === selectedDateKey)
-        .sort((a, b) => new Date(b.observed_at).getTime() - new Date(a.observed_at).getTime());
+      filteredEntries = preparedEntries.filter(entry => entry.dateKey === selectedDateKey);
+    } else {
+      const selectedFilter = FILTERS.find(filter => filter.key === activeFilter) || FILTERS[1];
+      const startDate = startOfDay(new Date());
+      startDate.setDate(startDate.getDate() - selectedFilter.days + 1);
+      const startMs = startDate.getTime();
+
+      filteredEntries = preparedEntries.filter(entry => entry.observedAtMs >= startMs);
     }
 
-    const selectedFilter = FILTERS.find(filter => filter.key === activeFilter) || FILTERS[1];
-    const startDate = startOfDay(new Date());
-    startDate.setDate(startDate.getDate() - selectedFilter.days + 1);
-
-    return [...entries]
-      .filter(entry => new Date(entry.observed_at) >= startDate)
-      .sort((a, b) => new Date(b.observed_at).getTime() - new Date(a.observed_at).getTime());
-  }, [activeFilter, entries, selectedDateKey]);
-
-  const entryNumberMap = useMemo(() => {
-    return new Map(visibleEntries.map((entry, index) => [entry.snapshot_id, index + 1]));
-  }, [visibleEntries]);
+    return filteredEntries.map((entry, index) => ({
+      ...entry,
+      displayNumber: index + 1,
+    }));
+  }, [activeFilter, preparedEntries, selectedDateKey]);
 
   const sections = useMemo<HistorySection[]>(() => {
-    const grouped = new Map<string, SensorSnapshotHistoryEntry[]>();
+    const grouped = new Map<string, VisibleHistoryEntry[]>();
 
     visibleEntries.forEach(entry => {
-      const title = getSectionTitle(entry.observed_at);
-      const items = grouped.get(title) || [];
+      const items = grouped.get(entry.sectionTitle) || [];
       items.push(entry);
-      grouped.set(title, items);
+      grouped.set(entry.sectionTitle, items);
     });
 
     return Array.from(grouped, ([title, data]) => ({ title, data }));
   }, [visibleEntries]);
 
-  const renderItem = ({ item }: { item: SensorSnapshotHistoryEntry }) => {
-    const metrics = buildMetrics(item);
-    return (
-      <View style={styles.histCard}>
-        {/* Card header */}
-        <View style={styles.histCardHeader}>
-          <View>
-            <Text style={styles.histDate}>{formatDate(item.observed_at)}</Text>
-            <Text style={styles.histBlock}>{activeBlock?.lanslu || 'Block'}</Text>
-          </View>
-          <View style={styles.entryBadge}>
-            <Text style={styles.entryBadgeText}>#{entryNumberMap.get(item.snapshot_id)}</Text>
-          </View>
-        </View>
-
-        <View style={styles.histDivider} />
-
-        {/* Metric chips */}
-        <View style={styles.chipGrid}>
-          {METRIC_DEFS.map(def => {
-            const val = metrics[def.key];
-            if (!val) return null;
-            return (
-              <View key={def.key} style={styles.metricChip}>
-                <AppIcon
-                  name={def.icon}
-                  size={11}
-                  color={colors.primary}
-                  backgroundColor="transparent"
-                />
-                <View>
-                  <Text style={styles.chipLabel}>{def.label}</Text>
-                  <Text style={styles.chipValue}>{val}</Text>
-                </View>
-              </View>
-            );
-          })}
-        </View>
-      </View>
-    );
-  };
+  const renderItem = useCallback(({ item }: { item: VisibleHistoryEntry }) => (
+    <HistoryCard item={item} blockName={activeBlock?.lanslu} />
+  ), [activeBlock?.lanslu]);
 
   const changeCalendarMonth = (direction: -1 | 1) => {
     setCalendarMonth(current => new Date(current.getFullYear(), current.getMonth() + direction, 1));
@@ -408,6 +441,10 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = () => {
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         stickySectionHeadersEnabled={false}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        updateCellsBatchingPeriod={40}
+        windowSize={7}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
