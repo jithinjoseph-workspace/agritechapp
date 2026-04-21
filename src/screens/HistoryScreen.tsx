@@ -1,8 +1,10 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
+  Modal,
+  Pressable,
   RefreshControl,
+  SectionList,
   StyleSheet,
   Text,
   View,
@@ -24,12 +26,78 @@ interface HistoryMetricMap {
   fertility?: string;
 }
 
+type HistoryFilter = 'today' | '7days' | '30days' | 'date';
+
+type HistorySection = {
+  title: string;
+  data: SensorSnapshotHistoryEntry[];
+};
+
 function formatDate(value: string) {
   const d = new Date(value);
   return new Intl.DateTimeFormat('en-IN', {
     day: '2-digit', month: 'short', year: 'numeric',
     hour: 'numeric', minute: '2-digit',
   }).format(d);
+}
+
+function formatSectionDate(value: string) {
+  const d = new Date(value);
+  return new Intl.DateTimeFormat('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(d);
+}
+
+function formatSelectedDate(value: Date) {
+  return new Intl.DateTimeFormat('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(value);
+}
+
+function formatMonthTitle(value: Date) {
+  return new Intl.DateTimeFormat('en-IN', {
+    month: 'long',
+    year: 'numeric',
+  }).format(value);
+}
+
+function startOfDay(date: Date) {
+  const next = new Date(date);
+  next.setHours(0, 0, 0, 0);
+  return next;
+}
+
+function toDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function fromDateKey(value: string) {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function getSectionTitle(value: string) {
+  const entryDate = startOfDay(new Date(value));
+  const today = startOfDay(new Date());
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+
+  if (entryDate.getTime() === today.getTime()) {
+    return 'Today';
+  }
+
+  if (entryDate.getTime() === yesterday.getTime()) {
+    return 'Yesterday';
+  }
+
+  return formatSectionDate(value);
 }
 
 function buildMetrics(entry: SensorSnapshotHistoryEntry): HistoryMetricMap {
@@ -57,12 +125,24 @@ const METRIC_DEFS: { key: keyof HistoryMetricMap; label: string; icon: any }[] =
   { key: 'fertility',   label: 'Fertility',  icon: 'fertility'   },
 ];
 
+const FILTERS: { key: HistoryFilter; label: string; days: number }[] = [
+  { key: 'today', label: 'Today', days: 1 },
+  { key: '7days', label: 'Last 7 days', days: 7 },
+  { key: '30days', label: 'Last 30 days', days: 30 },
+];
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
 export const HistoryScreen: React.FC<HistoryScreenProps> = () => {
   const { activeBlock } = useFarm();
   const [entries, setEntries]       = useState<SensorSnapshotHistoryEntry[]>([]);
   const [isLoading, setIsLoading]   = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<HistoryFilter>('7days');
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [selectedDateKey, setSelectedDateKey] = useState(toDateKey(new Date()));
+  const [calendarMonth, setCalendarMonth] = useState(startOfDay(new Date()));
 
   const load = useCallback(async (mode: 'initial' | 'refresh' = 'initial') => {
     if (!activeBlock?.block_id) {
@@ -86,7 +166,66 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = () => {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const renderItem = ({ item, index }: { item: SensorSnapshotHistoryEntry; index: number }) => {
+  const entryDateKeys = useMemo(() => {
+    return new Set(entries.map(entry => toDateKey(new Date(entry.observed_at))));
+  }, [entries]);
+
+  const calendarDays = useMemo(() => {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const cells: (Date | null)[] = Array(firstDay.getDay()).fill(null);
+
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      cells.push(new Date(year, month, day));
+    }
+
+    while (cells.length % 7 !== 0) {
+      cells.push(null);
+    }
+
+    return cells;
+  }, [calendarMonth]);
+
+  const selectedDateLabel = useMemo(() => {
+    return formatSelectedDate(fromDateKey(selectedDateKey));
+  }, [selectedDateKey]);
+
+  const visibleEntries = useMemo(() => {
+    if (activeFilter === 'date') {
+      return [...entries]
+        .filter(entry => toDateKey(new Date(entry.observed_at)) === selectedDateKey)
+        .sort((a, b) => new Date(b.observed_at).getTime() - new Date(a.observed_at).getTime());
+    }
+
+    const selectedFilter = FILTERS.find(filter => filter.key === activeFilter) || FILTERS[1];
+    const startDate = startOfDay(new Date());
+    startDate.setDate(startDate.getDate() - selectedFilter.days + 1);
+
+    return [...entries]
+      .filter(entry => new Date(entry.observed_at) >= startDate)
+      .sort((a, b) => new Date(b.observed_at).getTime() - new Date(a.observed_at).getTime());
+  }, [activeFilter, entries, selectedDateKey]);
+
+  const entryNumberMap = useMemo(() => {
+    return new Map(visibleEntries.map((entry, index) => [entry.snapshot_id, index + 1]));
+  }, [visibleEntries]);
+
+  const sections = useMemo<HistorySection[]>(() => {
+    const grouped = new Map<string, SensorSnapshotHistoryEntry[]>();
+
+    visibleEntries.forEach(entry => {
+      const title = getSectionTitle(entry.observed_at);
+      const items = grouped.get(title) || [];
+      items.push(entry);
+      grouped.set(title, items);
+    });
+
+    return Array.from(grouped, ([title, data]) => ({ title, data }));
+  }, [visibleEntries]);
+
+  const renderItem = ({ item }: { item: SensorSnapshotHistoryEntry }) => {
     const metrics = buildMetrics(item);
     return (
       <View style={styles.histCard}>
@@ -97,7 +236,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = () => {
             <Text style={styles.histBlock}>{activeBlock?.lanslu || 'Block'}</Text>
           </View>
           <View style={styles.entryBadge}>
-            <Text style={styles.entryBadgeText}>#{entries.length - index}</Text>
+            <Text style={styles.entryBadgeText}>#{entryNumberMap.get(item.snapshot_id)}</Text>
           </View>
         </View>
 
@@ -128,6 +267,16 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = () => {
     );
   };
 
+  const changeCalendarMonth = (direction: -1 | 1) => {
+    setCalendarMonth(current => new Date(current.getFullYear(), current.getMonth() + direction, 1));
+  };
+
+  const selectCalendarDate = (date: Date) => {
+    setSelectedDateKey(toDateKey(date));
+    setActiveFilter('date');
+    setIsCalendarOpen(false);
+  };
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -151,6 +300,97 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = () => {
         )}
       </View>
 
+      <View style={styles.filterRow}>
+        {FILTERS.map(filter => {
+          const isActive = activeFilter === filter.key;
+          return (
+            <Pressable
+              key={filter.key}
+              accessibilityRole="button"
+              onPress={() => setActiveFilter(filter.key)}
+              style={[styles.filterChip, isActive && styles.filterChipActive]}
+            >
+              <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
+                {filter.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => setIsCalendarOpen(true)}
+          style={[styles.filterChip, activeFilter === 'date' && styles.filterChipActive]}
+        >
+          <Text style={[styles.filterChipText, activeFilter === 'date' && styles.filterChipTextActive]}>
+            {activeFilter === 'date' ? selectedDateLabel : 'Date'}
+          </Text>
+        </Pressable>
+      </View>
+
+      <Modal
+        animationType="fade"
+        transparent
+        visible={isCalendarOpen}
+        onRequestClose={() => setIsCalendarOpen(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setIsCalendarOpen(false)}>
+          <Pressable style={styles.calendarPanel} onPress={() => {}}>
+            <View style={styles.calendarHeader}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => changeCalendarMonth(-1)}
+                style={styles.monthButton}
+              >
+                <Text style={styles.monthButtonText}>{'<'}</Text>
+              </Pressable>
+              <Text style={styles.calendarTitle}>{formatMonthTitle(calendarMonth)}</Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => changeCalendarMonth(1)}
+                style={styles.monthButton}
+              >
+                <Text style={styles.monthButtonText}>{'>'}</Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.weekdayRow}>
+              {WEEKDAYS.map(day => (
+                <Text key={day} style={styles.weekdayText}>{day}</Text>
+              ))}
+            </View>
+
+            <View style={styles.calendarGrid}>
+              {calendarDays.map((date, index) => {
+                if (!date) {
+                  return <View key={`empty-${index}`} style={styles.calendarDayCell} />;
+                }
+
+                const dateKey = toDateKey(date);
+                const isSelected = dateKey === selectedDateKey;
+                const hasEntries = entryDateKeys.has(dateKey);
+
+                return (
+                  <Pressable
+                    key={dateKey}
+                    accessibilityRole="button"
+                    onPress={() => selectCalendarDate(date)}
+                    style={[
+                      styles.calendarDayCell,
+                      isSelected && styles.calendarDaySelected,
+                    ]}
+                  >
+                    <Text style={[styles.calendarDayText, isSelected && styles.calendarDayTextSelected]}>
+                      {date.getDate()}
+                    </Text>
+                    {hasEntries && <View style={[styles.entryDot, isSelected && styles.entryDotSelected]} />}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       {/* Error banner */}
       {!!errorMessage && (
         <View style={styles.errorBanner}>
@@ -158,12 +398,16 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = () => {
         </View>
       )}
 
-      <FlatList
-        data={entries}
+      <SectionList
+        sections={sections}
         keyExtractor={item => item.snapshot_id}
         renderItem={renderItem}
+        renderSectionHeader={({ section }) => (
+          <Text style={styles.sectionTitle}>{section.title}</Text>
+        )}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        stickySectionHeadersEnabled={false}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -179,7 +423,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = () => {
             </View>
             <Text style={styles.emptyTitle}>No entries yet</Text>
             <Text style={styles.emptyText}>
-              Save sensor readings from the Sensors tab and they'll appear here.
+              Save sensor readings from the Sensors tab or choose another date range.
             </Text>
           </View>
         }
@@ -212,6 +456,120 @@ const styles = StyleSheet.create({
     color: colors.onSurface,
     letterSpacing: 0.2,
   },
+
+  filterRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    gap: 8,
+  },
+  filterChip: {
+    minHeight: 34,
+    paddingHorizontal: 12,
+    borderRadius: 17,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#dce7df',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  filterChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.onSurfaceVariant,
+  },
+  filterChipTextActive: {
+    color: '#ffffff',
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(12, 27, 20, 0.34)',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  calendarPanel: {
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    padding: 16,
+    shadowColor: '#1f3b2f',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.14,
+    shadowRadius: 18,
+    elevation: 8,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  calendarTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: colors.onSurface,
+  },
+  monthButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#f0f4f2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  monthButtonText: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  weekdayRow: {
+    flexDirection: 'row',
+    marginBottom: 6,
+  },
+  weekdayText: {
+    width: '14.285%',
+    textAlign: 'center',
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.onSurfaceVariant,
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  calendarDayCell: {
+    width: '14.285%',
+    aspectRatio: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+  },
+  calendarDaySelected: {
+    backgroundColor: colors.primary,
+  },
+  calendarDayText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.onSurface,
+  },
+  calendarDayTextSelected: {
+    color: '#ffffff',
+  },
+  entryDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: colors.primary,
+    marginTop: 3,
+  },
+  entryDotSelected: {
+    backgroundColor: '#ffffff',
+  },
   blockPill: {
     paddingHorizontal: 12,
     paddingVertical: 5,
@@ -240,9 +598,19 @@ const styles = StyleSheet.create({
 
   list: {
     paddingHorizontal: 20,
-    paddingTop: 4,
+    paddingTop: 2,
     paddingBottom: 120,
     gap: 12,
+  },
+
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: colors.onSurfaceVariant,
+    marginTop: 4,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
 
   /* History card */
