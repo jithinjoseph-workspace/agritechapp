@@ -2,6 +2,26 @@ This is a new [**React Native**](https://reactnative.dev) project, bootstrapped 
 
 # Getting Started
 
+## Project root
+
+Run React Native commands from `C:\PromatasDev\AgritechApp`.
+
+If you run `npx react-native ...` from `C:\PromatasDev\AgriTech`, you will see CLI-related errors because that folder is a different project and does not contain the React Native app.
+
+## Windows note
+
+In PowerShell, `npx` can be blocked by execution-policy settings. If that happens, use one of these from the app root instead:
+
+```bat
+npm run android
+```
+
+or:
+
+```bat
+npx.cmd react-native run-android
+```
+
 > **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
 
 ## Step 1: Start Metro
