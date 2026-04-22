@@ -16,6 +16,7 @@ import { useFarm } from '../context/FarmContext';
 import { useAuth } from '../context/AuthContext';
 import { AppIcon } from './AppIcon';
 import { RootStackParamList } from '../navigation/types';
+import { getBlockDisplayName } from '../utils/blockDisplay';
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -64,6 +65,7 @@ export const GlobalHeader = () => {
   if (!farmData || !activeBlock) return null;
 
   const displayName = farmData?.name || user?.name || user?.email?.split('@')[0] || 'User';
+  const activeBlockName = getBlockDisplayName(farmData.blocks, activeBlock);
   const firstName = displayName.split(' ')[0];
   const initials = displayName
     .split(' ')
@@ -99,7 +101,7 @@ export const GlobalHeader = () => {
               <Text style={styles.blockLabel} numberOfLines={1}>
                 {activeBlock.crop}
                 <Text style={styles.blockSep}> · </Text>
-                {activeBlock.lanslu}
+                {activeBlockName}
               </Text>
               <View style={styles.chevronWrap}>
                 <AppIcon name="expand" size={11} color={colors.primary} />
@@ -142,6 +144,7 @@ export const GlobalHeader = () => {
             <Text style={styles.dropdownHeader}>Select Block</Text>
             {farmData.blocks.map(block => {
               const isActive = activeBlock.block_id === block.block_id;
+              const blockName = getBlockDisplayName(farmData.blocks, block);
               return (
                 <TouchableOpacity
                   key={block.block_id}
@@ -151,7 +154,7 @@ export const GlobalHeader = () => {
                 >
                   <View style={styles.dropdownItemInner}>
                     <Text style={[styles.dropdownItemName, isActive && styles.dropdownNameActive]}>
-                      {block.lanslu}
+                      {blockName}
                     </Text>
                     <Text style={styles.dropdownItemCrop}>{block.crop}</Text>
                   </View>

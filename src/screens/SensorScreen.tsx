@@ -14,6 +14,7 @@ import { colors } from '../theme/colors';
 import { useFarm } from '../context/FarmContext';
 import { authService } from '../api/authService';
 import { AppIcon } from '../components/AppIcon';
+import { getBlockDisplayName } from '../utils/blockDisplay';
 
 const SENSOR_FIELDS = [
   { key: 'ph',        label: 'pH Level',         unit: 'pH',   icon: 'ph',          tag: 'Chemistry'  },
@@ -25,7 +26,7 @@ const SENSOR_FIELDS = [
 ] as const;
 
 export const SensorScreen = ({ navigation }: any) => {
-  const { activeBlock, refreshActiveBlockSensors } = useFarm();
+  const { farmData, activeBlock, refreshActiveBlockSensors } = useFarm();
   const [ph, setPh]             = useState('');
   const [temp, setTemp]         = useState('');
   const [moisture, setMoisture] = useState('');
@@ -49,6 +50,7 @@ export const SensorScreen = ({ navigation }: any) => {
   }, [activeBlock]);
 
   const fieldState: Record<string, string> = { ph, temp, moisture, sunlight, humidity, fertility };
+  const activeBlockName = getBlockDisplayName(farmData?.blocks, activeBlock);
   const fieldSetters: Record<string, (v: string) => void> = {
     ph: setPh, temp: setTemp, moisture: setMoisture,
     sunlight: setSunlight, humidity: setHumidity, fertility: setFertility,
@@ -92,7 +94,7 @@ export const SensorScreen = ({ navigation }: any) => {
         {!!activeBlock && (
           <View style={styles.blockPill}>
             <AppIcon name="location" size={13} color={colors.primary} backgroundColor="transparent" />
-            <Text style={styles.blockPillText}>{activeBlock.lanslu} · {activeBlock.crop}</Text>
+            <Text style={styles.blockPillText}>{activeBlockName} · {activeBlock.crop}</Text>
           </View>
         )}
 

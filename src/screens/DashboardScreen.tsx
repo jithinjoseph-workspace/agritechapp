@@ -5,6 +5,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors } from '../theme/colors';
 import { useFarm } from '../context/FarmContext';
 import { AppIcon } from '../components/AppIcon';
+import { getBlockDisplayName } from '../utils/blockDisplay';
 
 const SENSOR_META: Record<
   string,
@@ -50,7 +51,7 @@ const DisplayStatCard = ({ sensorType, value, status }: any) => {
 };
 
 export const DashboardScreen = () => {
-  const { activeBlock, refreshActiveBlockSensors } = useFarm();
+  const { farmData, activeBlock, refreshActiveBlockSensors } = useFarm();
 
   useFocusEffect(
     useCallback(() => {
@@ -59,6 +60,8 @@ export const DashboardScreen = () => {
   );
 
   if (!activeBlock) return null;
+
+  const activeBlockName = getBlockDisplayName(farmData?.blocks, activeBlock);
 
   const getSensor = (type: string) =>
     activeBlock.sensors.sensors.find(s => s.sensor_type === type);
@@ -88,7 +91,7 @@ export const DashboardScreen = () => {
           {/* Decorative orb */}
           <View style={styles.heroOrb} />
           <Text style={styles.heroEyebrow}>Selected Block</Text>
-          <Text style={styles.heroTitle}>{activeBlock.lanslu}</Text>
+          <Text style={styles.heroTitle}>{activeBlockName}</Text>
           <View style={styles.heroMeta}>
             <View style={styles.heroPill}>
               <Text style={styles.heroPillText}>{activeBlock.crop}</Text>

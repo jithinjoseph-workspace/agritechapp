@@ -16,6 +16,7 @@ import { useFarm } from '../context/FarmContext';
 import { HistoryScreenProps } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { AppIcon } from '../components/AppIcon';
+import { getBlockDisplayName } from '../utils/blockDisplay';
 
 interface HistoryMetricMap {
   moisture?: string;
@@ -190,7 +191,7 @@ const HistoryCard = React.memo(({ item, blockName }: HistoryCardProps) => {
 });
 
 export const HistoryScreen: React.FC<HistoryScreenProps> = () => {
-  const { activeBlock } = useFarm();
+  const { farmData, activeBlock } = useFarm();
   const [entries, setEntries]       = useState<SensorSnapshotHistoryEntry[]>([]);
   const [isLoading, setIsLoading]   = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -296,9 +297,11 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = () => {
     return Array.from(grouped, ([title, data]) => ({ title, data }));
   }, [visibleEntries]);
 
+  const activeBlockName = getBlockDisplayName(farmData?.blocks, activeBlock);
+
   const renderItem = useCallback(({ item }: { item: VisibleHistoryEntry }) => (
-    <HistoryCard item={item} blockName={activeBlock?.lanslu} />
-  ), [activeBlock?.lanslu]);
+    <HistoryCard item={item} blockName={activeBlockName} />
+  ), [activeBlockName]);
 
   const changeCalendarMonth = (direction: -1 | 1) => {
     setCalendarMonth(current => new Date(current.getFullYear(), current.getMonth() + direction, 1));
@@ -328,7 +331,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = () => {
         <Text style={styles.pageLabel}>History</Text>
         {!!activeBlock && (
           <View style={styles.blockPill}>
-            <Text style={styles.blockPillText}>{activeBlock.lanslu}</Text>
+            <Text style={styles.blockPillText}>{activeBlockName}</Text>
           </View>
         )}
       </View>

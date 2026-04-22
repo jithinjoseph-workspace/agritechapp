@@ -12,6 +12,7 @@ import { useAuth } from '../context/AuthContext';
 import { useFarm } from '../context/FarmContext';
 import { colors } from '../theme/colors';
 import { AppIcon } from '../components/AppIcon';
+import { getBlockDisplayName } from '../utils/blockDisplay';
 
 export const ProfileScreen = () => {
   const insets = useSafeAreaInsets();
@@ -134,11 +135,13 @@ export const ProfileScreen = () => {
         {farmData?.blocks && farmData.blocks.length > 0 && (
           <>
             <SectionLabel text="Blocks" />
-            {farmData.blocks.map((block, index) => (
-              <View
-                key={block.block_id}
-                style={[styles.blockCard, index > 0 && { marginTop: 12 }]}
-              >
+            {farmData.blocks.map((block, index) => {
+              const blockName = getBlockDisplayName(farmData.blocks, block);
+              return (
+                <View
+                  key={block.block_id}
+                  style={[styles.blockCard, index > 0 && { marginTop: 12 }]}
+                >
                 {/* Block header bar */}
                 <View style={styles.blockBar}>
                   <View style={styles.blockBarLeft}>
@@ -146,7 +149,7 @@ export const ProfileScreen = () => {
                       <Text style={styles.blockNumberText}>{index + 1}</Text>
                     </View>
                     <View>
-                      <Text style={styles.blockBarName}>{block.lanslu}</Text>
+                      <Text style={styles.blockBarName}>{blockName}</Text>
                       <Text style={styles.blockBarCrop}>{block.crop}</Text>
                     </View>
                   </View>
@@ -172,8 +175,9 @@ export const ProfileScreen = () => {
                     <Chip icon="history" label="Notes" value={block.description} wide />
                   )}
                 </View>
-              </View>
-            ))}
+                </View>
+              );
+            })}
           </>
         )}
       </ScrollView>
