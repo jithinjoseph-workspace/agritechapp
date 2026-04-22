@@ -119,7 +119,7 @@ export const SettingsScreen = () => {
                 <AppIcon name="brand" size={16} color={colors.onPrimary} backgroundColor="transparent" />
               </View>
               <View>
-                <Text style={styles.aboutAppName}>AgriTech</Text>
+                <Text style={styles.aboutAppName}>AgriOne</Text>
                 <Text style={styles.aboutVersion}>Version 0.0.1</Text>
               </View>
             </View>

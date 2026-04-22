@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -89,8 +90,13 @@ export const LoginScreen = (_props: any) => {
               </View>
             </View>
 
-            <Text style={styles.appName}>AgriTech</Text>
-            <Text style={styles.tagline}>Farm Intelligence Platform</Text>
+            <Text style={styles.appName}>AgriOne</Text>
+            <Text style={styles.tagline}>AgriOne for Everyone</Text>
+            <Image
+              source={require('../assets/images/promatas.png')}
+              style={styles.partnerMark}
+              resizeMode="contain"
+            />
           </View>
 
           {/* ── Form card ────────────────────────────── */}
@@ -182,6 +188,17 @@ export const LoginScreen = (_props: any) => {
             </TouchableOpacity>
           </View>
 
+          <View style={styles.loginFooter}>
+            <View style={styles.securedByRow}>
+              <Text style={styles.securedByText}>Secured by</Text>
+              <Image
+                source={require('../assets/images/promasecure.png')}
+                style={styles.securedByMark}
+                resizeMode="contain"
+              />
+            </View>
+          </View>
+
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -229,6 +246,36 @@ const styles = StyleSheet.create({
     color: colors.onSurface,
     letterSpacing: 0.5,
     marginBottom: 5,
+  },
+  partnerMark: {
+    width: 88,
+    height: 24,
+    marginTop: 10,
+    opacity: 0.92,
+  },
+  securedByRow: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  securedByText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.onSurfaceVariant,
+    letterSpacing: 0.2,
+    textAlign: 'center',
+  },
+  securedByMark: {
+    width: 84,
+    height: 18,
+    opacity: 0.9,
+  },
+  loginFooter: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 26,
+    width: '100%',
   },
   tagline: {
     fontSize: 13,

@@ -33,6 +33,10 @@ export const ProfileScreen = () => {
   const farmName = farmData?.farm_name || '';
   const location = farmData?.farm_location || '';
   const blockCount = farmData?.blocks?.length ?? 0;
+  const formatTimezone = (timezone: string) =>
+    timezone === 'Australia/Sydney'
+      ? 'Australia/Adelaide'
+      : timezone.replace('_', ' ');
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
@@ -169,7 +173,7 @@ export const ProfileScreen = () => {
                     <Chip icon="sensors" label="Area" value={`${block.area_ha} ha`} />
                   )}
                   {!!block.timezone && (
-                    <Chip icon="timer" label="Timezone" value={block.timezone.replace('_', ' ')} />
+                    <Chip icon="timer" label="Timezone" value={formatTimezone(block.timezone)} />
                   )}
                   {!!block.description && (
                     <Chip icon="history" label="Notes" value={block.description} wide />
